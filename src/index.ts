@@ -9,7 +9,7 @@ const program = new Command();
 
 program
   .name("claude-duet")
-  .description("Claude Duet \u2014 share a Claude Code session with a partner")
+  .description("Claude duet coding \u2014 share a Claude Code session with a partner")
   .version("0.1.0");
 
 program

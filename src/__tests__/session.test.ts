@@ -10,7 +10,7 @@ describe("SessionManager", () => {
 
   it("creates a session with a code and password", () => {
     const session = manager.create("alice");
-    expect(session.code).toMatch(/^pv-[a-z0-9]+$/);
+    expect(session.code).toMatch(/^cd-[a-z0-9]+$/);
     expect(session.password).toBeTruthy();
     expect(session.hostUser).toBe("alice");
   });
@@ -26,7 +26,7 @@ describe("SessionManager", () => {
   });
 
   it("rejects unknown session code", () => {
-    expect(manager.validate("pv-nonexistent", "any")).toBe(false);
+    expect(manager.validate("cd-nonexistent", "any")).toBe(false);
   });
 
   it("adds a guest to a session", () => {

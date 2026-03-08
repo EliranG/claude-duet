@@ -51,36 +51,63 @@ describe("TerminalUI", () => {
 
   it("showWelcome displays session info", () => {
     ui = new TerminalUI({ userName: "alice", role: "host" });
-    ui.showWelcome("pv-abc123", "secret");
+    ui.showWelcome("cd-abc123", "secret");
     expect(console.log).toHaveBeenCalled();
   });
 
   it("showWelcome displays a copy-paste join command", () => {
     ui = new TerminalUI({ userName: "alice", role: "host" });
-    ui.showWelcome("pv-abc123", "secret", "ws://192.168.1.5:4567");
+    ui.showWelcome("cd-abc123", "secret", "ws://192.168.1.5:4567");
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
-    expect(output).toContain("npx claude-duet join pv-abc123 --password secret --url ws://192.168.1.5:4567");
+    expect(output).toContain("npx claude-duet join cd-abc123 --password secret --url ws://192.168.1.5:4567");
   });
 
   it("applies terminal background on showWelcome", () => {
     ui = new TerminalUI({ userName: "alice", role: "host" });
-    ui.showWelcome("pv-abc123", "secret", "ws://localhost:3000");
+    ui.showWelcome("cd-abc123", "secret", "ws://localhost:3000");
     const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
     expect(allWrites).toContain("\x1b[48;2;");
   });
 
   it("restores terminal background on close", () => {
     ui = new TerminalUI({ userName: "alice", role: "host" });
-    ui.showWelcome("pv-abc123", "secret", "ws://localhost:3000");
+    ui.showWelcome("cd-abc123", "secret", "ws://localhost:3000");
     ui.close();
     const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
     expect(allWrites).toContain("\x1b[0m");
   });
 
+  it("applySessionBackground writes an ANSI background escape", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.applySessionBackground();
+    const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
+    expect(allWrites).toContain("\x1b[48;2;");
+  });
+
+  it("close restores background after applySessionBackground", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.applySessionBackground();
+    ui.close();
+    const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
+    // Should contain both apply and restore sequences
+    expect(allWrites).toContain("\x1b[48;2;");
+    expect(allWrites).toContain("\x1b[0m");
+  });
+
+  it("applySessionBackground is idempotent (only applies once)", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.applySessionBackground();
+    ui.applySessionBackground(); // second call should be a no-op
+    const writes = (process.stdout.write as any).mock.calls.filter(
+      (c: any[]) => String(c[0]).includes("\x1b[48;2;")
+    );
+    expect(writes.length).toBe(1);
+  });
+
   it("showWelcome includes a Slack-friendly share message", () => {
     ui = new TerminalUI({ userName: "alice", role: "host" });
-    ui.showWelcome("pv-abc123", "secret", "ws://192.168.1.5:4567");
+    ui.showWelcome("cd-abc123", "secret", "ws://192.168.1.5:4567");
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
     expect(output).toContain("claude-duet");

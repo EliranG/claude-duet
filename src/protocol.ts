@@ -88,6 +88,11 @@ export interface PresenceMessage extends BaseMessage {
   users: Array<{ name: string; role: "host" | "guest" }>;
 }
 
+export interface NoticeMessage extends BaseMessage {
+  type: "notice";
+  message: string;
+}
+
 export interface ErrorMessage extends BaseMessage {
   type: "error";
   message: string;
@@ -111,6 +116,7 @@ export type ServerMessage =
   | ToolResultMessage
   | TurnComplete
   | PresenceMessage
+  | NoticeMessage
   | ErrorMessage;
 
 export type Message = ClientMessage | ServerMessage;

@@ -68,6 +68,10 @@ export async function hostCommand(options: HostOptions): Promise<void> {
         ui.showTurnComplete(event.cost, event.durationMs);
         server.broadcast({ ...event, timestamp: Date.now() });
         break;
+      case "notice":
+        ui.showSystem(event.message);
+        server.broadcast({ type: "notice", message: event.message, timestamp: Date.now() });
+        break;
       case "error":
         ui.showError(event.message);
         server.broadcast({ type: "error", message: event.message, timestamp: Date.now() });

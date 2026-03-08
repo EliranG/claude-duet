@@ -17,7 +17,7 @@ export class SessionManager {
   private sessions = new Map<string, Session>();
 
   create(hostUser: string): Session {
-    const code = `pv-${nanoid()}`;
+    const code = `cd-${nanoid()}`;
     const password = randomBytes(4).toString("hex"); // 8-char hex
     const session: Session = {
       code,

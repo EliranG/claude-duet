@@ -82,8 +82,8 @@ async function runHostWizard(name: string): Promise<WizardResult | null> {
 async function runJoinWizard(name: string): Promise<WizardResult | null> {
   const sessionCode = await p.text({
     message: "Session code?",
-    placeholder: "pv-xxxxxxxx",
-    validate: (v) => v?.startsWith("pv-") ? undefined : "Session codes start with pv-",
+    placeholder: "cd-xxxxxxxx",
+    validate: (v) => v?.startsWith("cd-") ? undefined : "Session codes start with cd-",
   }) as string;
 
   if (p.isCancel(sessionCode)) { p.cancel("Cancelled."); return null; }

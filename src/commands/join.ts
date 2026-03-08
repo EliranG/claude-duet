@@ -18,7 +18,8 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
   try {
     const result = await client.connect(serverUrl, options.name, options.password);
-    ui.showSystem(`Connected! You're duet coding with ${result.hostUser}.`);
+    ui.applySessionBackground();
+    ui.showSystem(`Connected! You're in a duet session with ${result.hostUser}.`);
     if (result.approvalMode) {
       ui.showSystem("Approval mode is ON \u2014 host will review your prompts.");
     }
@@ -47,6 +48,9 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
         break;
       case "turn_complete":
         ui.showTurnComplete(msg.cost, msg.durationMs);
+        break;
+      case "notice":
+        ui.showSystem(msg.message);
         break;
       case "error":
         ui.showError(msg.message);

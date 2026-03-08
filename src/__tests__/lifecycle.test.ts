@@ -5,7 +5,7 @@ describe("SessionLifecycle", () => {
   let lifecycle: SessionLifecycle;
 
   beforeEach(() => {
-    lifecycle = new SessionLifecycle("pv-test123", "alice");
+    lifecycle = new SessionLifecycle("cd-test123", "alice");
   });
 
   it("tracks session start time", () => {

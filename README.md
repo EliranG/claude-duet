@@ -2,7 +2,7 @@
 
 # claude-duet
 
-**Two developers, one Claude. Duet coding in real-time.**
+**Two developers, one Claude. Claude duet coding in real-time.**
 
 [![npm version](https://img.shields.io/npm/v/claude-duet)](https://www.npmjs.com/package/claude-duet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -30,7 +30,7 @@ npx claude-duet host
 The host terminal will display a ready-to-share command like:
 
 ```
-npx claude-duet join pv-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
+npx claude-duet join cd-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
 ```
 
 Send it via Slack, Discord, or any chat. Your partner runs it and you're paired up.

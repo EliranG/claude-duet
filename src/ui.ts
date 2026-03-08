@@ -41,9 +41,14 @@ export class TerminalUI {
     if (this.approvalHandler) this.approvalHandler(promptId, approved);
   }
 
-  showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
+  applySessionBackground(): void {
+    if (this.background) return; // Already applied
     this.background = pickSessionBackground();
     process.stdout.write(applyBackground(this.background));
+  }
+
+  showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
+    this.applySessionBackground();
     console.log("");
     console.log(pc.bold(pc.cyan("  \u2726 claude-duet session started")));
     console.log(`  Session code: ${pc.bold(sessionCode)}`);

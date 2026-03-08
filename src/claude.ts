@@ -5,6 +5,7 @@ export type ClaudeEvent =
   | { type: "tool_use"; tool: string; input: Record<string, unknown> }
   | { type: "tool_result"; tool: string; output: string }
   | { type: "turn_complete"; cost: number; durationMs: number }
+  | { type: "notice"; message: string }
   | { type: "error"; message: string };
 
 interface FormatOptions {
@@ -14,6 +15,7 @@ interface FormatOptions {
 export class ClaudeBridge extends EventEmitter {
   private sessionId?: string;
   private isRunning = false;
+  private sdkWarningShown = false;
 
   formatPrompt(user: string, text: string, options?: FormatOptions): string {
     const label = options?.isHost ? `${user} (host)` : user;
@@ -67,10 +69,25 @@ export class ClaudeBridge extends EventEmitter {
         }
       }
     } catch (err) {
-      this.emit("event", {
-        type: "error",
-        message: err instanceof Error ? err.message : String(err),
-      } satisfies ClaudeEvent);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isSdkMissing =
+        errMsg.includes("Cannot find package") || errMsg.includes("Cannot find module");
+
+      if (isSdkMissing) {
+        if (!this.sdkWarningShown) {
+          this.sdkWarningShown = true;
+          this.emit("event", {
+            type: "notice",
+            message: "Claude Agent SDK not available \u2014 prompts will be echoed but not sent to Claude.",
+          } satisfies ClaudeEvent);
+        }
+        // Silently skip on subsequent attempts
+      } else {
+        this.emit("event", {
+          type: "error",
+          message: errMsg,
+        } satisfies ClaudeEvent);
+      }
     } finally {
       this.isRunning = false;
     }
