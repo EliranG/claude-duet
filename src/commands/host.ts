@@ -49,6 +49,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
 
   ui.showWelcome(session.code, session.password);
   ui.showSystem(`Connect URL: ${connInfo.displayUrl}`);
+  ui.startInputLoop();
 
   claude.on("event", (event) => {
     switch (event.type) {

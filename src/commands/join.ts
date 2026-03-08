@@ -23,6 +23,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
       ui.showSystem("Approval mode is ON \u2014 host will review your prompts.");
     }
     console.log("");
+    ui.startInputLoop();
   } catch (err) {
     ui.showError(`Failed to join: ${err instanceof Error ? err.message : err}`);
     process.exit(1);

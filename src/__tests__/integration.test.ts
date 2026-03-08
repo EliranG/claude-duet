@@ -3,6 +3,7 @@ import { PairVibeServer } from "../server.js";
 import { PairVibeClient } from "../client.js";
 import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
+import { TerminalUI } from "../ui.js";
 
 // Mock the Claude Agent SDK to avoid real API calls
 vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
@@ -12,10 +13,19 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 describe("integration: host + guest full flow", () => {
   let server: PairVibeServer;
   let client: PairVibeClient;
+  let ui: TerminalUI | undefined;
 
   afterEach(async () => {
-    if (client) await client.disconnect();
-    if (server) await server.stop();
+    ui?.close();
+    ui = undefined;
+    if (client) {
+      await client.disconnect();
+      client = undefined!;
+    }
+    if (server) {
+      await server.stop();
+      server = undefined!;
+    }
   });
 
   it("guest connects, sends prompt, host approves, Claude responds", async () => {
@@ -70,6 +80,25 @@ describe("integration: host + guest full flow", () => {
     expect(sendPromptSpy).toHaveBeenCalledWith("bob", "fix the bug", {
       isHost: false,
     });
+  });
+
+  it("host can type messages via TerminalUI simulateInput", async () => {
+    // Test the UI → handler → claude wiring pattern (no real server needed)
+    const claude = new ClaudeBridge();
+    const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockResolvedValue(undefined);
+
+    ui = new TerminalUI({ userName: "alice", role: "host" });
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    ui.onInput((text) => {
+      claude.sendPrompt("alice", text, { isHost: true });
+    });
+
+    // Simulate typing via the test helper
+    ui.simulateInput("fix the tests");
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(sendPromptSpy).toHaveBeenCalledWith("alice", "fix the tests", { isHost: true });
   });
 
   it("guest receives streamed responses", async () => {
