@@ -6,13 +6,16 @@
 
 **Architecture:** Host runs Claude Agent SDK + WebSocket server. Joiner connects via WebSocket — directly on LAN (default), or through an optional tunnel/relay for remote. All messages are E2E encrypted. Host can approve/reject joiner's prompts.
 
-**Tech Stack:** TypeScript, `@anthropic-ai/claude-agent-sdk`, `ws`, `commander`, `tweetnacl`, `nanoid`, `chalk` (zero third-party relay dependencies)
+**Tech Stack:** TypeScript, `ink` + `@inkjs/ui` (React terminal UI), `@clack/prompts` (setup wizard), `@anthropic-ai/claude-agent-sdk`, `ws`, `commander`, `tweetnacl`, `nanoid`, `picocolors`, `qrcode-terminal` (zero third-party relay dependencies)
+
+**UX:** Interactive setup wizard by default (@clack/prompts), Ink-based session TUI (like Claude Code), CLI flags for power users/scripts.
 
 **Connection Tiers:**
 | Tier | Mode | Third-Party? | How |
 |------|------|:---:|-----|
 | 1 (default) | Direct LAN/VPN | None | `ws://192.168.x.x:PORT` |
-| 2 (opt-in) | Cloudflare Quick Tunnel | User's own `cloudflared` | `--tunnel cloudflare` |
+| 2 (recommended remote) | SSH tunnel | None | `ssh -L` (user's own SSH) |
+| 3 (opt-in) | Cloudflare Quick Tunnel | User's own `cloudflared` | `--tunnel cloudflare` |
 | 3 (opt-in) | Self-hosted relay | Your own server | `--relay wss://relay.company.com` |
 | 4 (future) | Supabase Broadcast | Supabase (opt-in dep) | `--relay supabase` |
 
@@ -58,8 +61,8 @@ Create `package.json`:
 **Step 2: Install dependencies**
 
 ```bash
-npm install commander ws chalk nanoid tweetnacl tweetnacl-util @anthropic-ai/claude-agent-sdk
-npm install -D typescript @types/node @types/ws vitest
+npm install commander ws nanoid tweetnacl tweetnacl-util @anthropic-ai/claude-agent-sdk ink @inkjs/ui react @clack/prompts picocolors qrcode-terminal
+npm install -D typescript @types/node @types/ws @types/react vitest
 ```
 
 **Step 3: Create tsconfig.json**
@@ -1685,165 +1688,320 @@ git commit -m "feat: add connection layer with LAN auto-detect, Cloudflare tunne
 
 ---
 
-## Task 10: Terminal UI (Display Layer)
+## Task 10: Setup Wizard (@clack/prompts)
 
 **Files:**
-- Create: `src/ui.ts`
+- Create: `src/wizard.ts`
 
-This is the terminal rendering layer. Not TDD since it's purely visual output.
+The interactive setup flow that runs when user types `pair-vibe` with no args.
+Uses @clack/prompts for beautiful Claude Code-inspired interactive prompts.
 
-**Step 1: Implement the UI module**
+**Step 1: Implement the wizard**
 
-Create `src/ui.ts`:
+Create `src/wizard.ts`:
 ```typescript
-import chalk from "chalk";
-import readline from "node:readline";
+import * as p from "@clack/prompts";
+import pc from "picocolors";
 
-export interface UIOptions {
-  userName: string;
-  role: "host" | "guest";
+export interface WizardResult {
+  mode: "host" | "join" | "relay";
+  name: string;
+  // Host options
+  connectionType?: "lan" | "ssh" | "cloudflare" | "relay";
+  trustMode?: "approval" | "trusted";
+  port?: number;
+  relayUrl?: string;
+  // Join options
+  sessionCode?: string;
+  password?: string;
+  url?: string;
+  // Relay options
+  relayPort?: number;
 }
 
-export class TerminalUI {
-  private rl: readline.Interface;
-  private options: UIOptions;
-  private inputCallback?: (text: string) => void;
-  private approvalCallback?: (promptId: string, approved: boolean) => void;
-  private pendingApproval?: { promptId: string; user: string; text: string };
+export async function runWizard(): Promise<WizardResult | null> {
+  p.intro(`${pc.bgCyan(pc.black(" pair-vibe "))} ${pc.dim("v0.1.0")}`);
 
-  constructor(options: UIOptions) {
-    this.options = options;
-    this.rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+  const mode = await p.select({
+    message: "What would you like to do?",
+    options: [
+      { value: "host", label: "Host a session", hint: "you run Claude Code" },
+      { value: "join", label: "Join a session", hint: "connect to a partner" },
+      { value: "relay", label: "Run a relay server", hint: "for remote teams" },
+    ],
+  }) as "host" | "join" | "relay";
 
-    this.rl.on("line", (line) => this.handleInput(line));
+  if (p.isCancel(mode)) { p.cancel("Cancelled."); return null; }
+
+  const name = await p.text({
+    message: "Your display name?",
+    placeholder: process.env.USER || "developer",
+    defaultValue: process.env.USER || "developer",
+  }) as string;
+
+  if (p.isCancel(name)) { p.cancel("Cancelled."); return null; }
+
+  if (mode === "host") return runHostWizard(name);
+  if (mode === "join") return runJoinWizard(name);
+  return runRelayWizard(name);
+}
+
+async function runHostWizard(name: string): Promise<WizardResult | null> {
+  const connectionType = await p.select({
+    message: "How will your partner connect?",
+    options: [
+      { value: "lan", label: "Same network (LAN / VPN)", hint: "default, no setup needed" },
+      { value: "ssh", label: "SSH tunnel", hint: "partner has SSH access to this machine" },
+      { value: "cloudflare", label: "Cloudflare tunnel", hint: "requires cloudflared installed" },
+      { value: "relay", label: "Self-hosted relay", hint: "connect via your team's relay server" },
+    ],
+  }) as "lan" | "ssh" | "cloudflare" | "relay";
+
+  if (p.isCancel(connectionType)) { p.cancel("Cancelled."); return null; }
+
+  let relayUrl: string | undefined;
+  if (connectionType === "relay") {
+    relayUrl = await p.text({
+      message: "Relay server URL?",
+      placeholder: "wss://relay.mycompany.com",
+    }) as string;
+    if (p.isCancel(relayUrl)) { p.cancel("Cancelled."); return null; }
   }
 
-  onInput(callback: (text: string) => void): void {
-    this.inputCallback = callback;
-  }
+  const trustMode = await p.select({
+    message: "Trust mode?",
+    options: [
+      { value: "approval", label: "Approval mode", hint: "you review partner's prompts before execution" },
+      { value: "trusted", label: "Trusted mode", hint: "partner's prompts execute immediately" },
+    ],
+  }) as "approval" | "trusted";
 
-  onApproval(callback: (promptId: string, approved: boolean) => void): void {
-    this.approvalCallback = callback;
-  }
+  if (p.isCancel(trustMode)) { p.cancel("Cancelled."); return null; }
 
-  private handleInput(line: string): void {
-    const trimmed = line.trim();
-    if (!trimmed) return;
+  return { mode: "host", name, connectionType, trustMode, relayUrl };
+}
 
-    // Handle approval responses
-    if (this.pendingApproval) {
-      const approved = trimmed.toLowerCase() === "y" || trimmed.toLowerCase() === "yes";
-      this.approvalCallback?.(this.pendingApproval.promptId, approved);
-      this.pendingApproval = undefined;
-      this.showPrompt();
-      return;
-    }
+async function runJoinWizard(name: string): Promise<WizardResult | null> {
+  const sessionCode = await p.text({
+    message: "Session code?",
+    placeholder: "pv-xxxxxxxx",
+    validate: (v) => v.startsWith("pv-") ? undefined : "Session codes start with pv-",
+  }) as string;
 
-    // Handle commands
-    if (trimmed === "/quit" || trimmed === "/q") {
-      this.close();
-      process.exit(0);
-    }
+  if (p.isCancel(sessionCode)) { p.cancel("Cancelled."); return null; }
 
-    if (trimmed === "/trust") {
-      this.showSystem("Approval mode disabled — partner's prompts will execute directly.");
-      return;
-    }
+  const password = await p.password({
+    message: "Password?",
+  }) as string;
 
-    this.inputCallback?.(trimmed);
-    this.showPrompt();
-  }
+  if (p.isCancel(password)) { p.cancel("Cancelled."); return null; }
 
-  showWelcome(sessionCode: string, password?: string): void {
-    console.log("");
-    console.log(chalk.bold.cyan("  pair-vibe"));
-    console.log(chalk.gray("  ─────────────────────────────"));
-    if (this.options.role === "host") {
-      console.log(`  Session:  ${chalk.bold.yellow(sessionCode)}`);
-      if (password) {
-        console.log(`  Password: ${chalk.bold.yellow(password)}`);
-      }
-      console.log(chalk.gray("  Waiting for partner to join..."));
-    }
-    console.log(chalk.gray("  Commands: /quit, /trust"));
-    console.log(chalk.gray("  ─────────────────────────────"));
-    console.log("");
-  }
+  const url = await p.text({
+    message: "Connection URL?",
+    placeholder: "ws://192.168.1.42:9876",
+    validate: (v) => v.startsWith("ws://") || v.startsWith("wss://") ? undefined : "Must start with ws:// or wss://",
+  }) as string;
 
-  showPartnerJoined(user: string): void {
-    console.log(chalk.green(`  ● ${user} joined the session`));
-    console.log("");
-    this.showPrompt();
-  }
+  if (p.isCancel(url)) { p.cancel("Cancelled."); return null; }
 
-  showPartnerLeft(user: string): void {
-    console.log(chalk.red(`  ○ ${user} left the session`));
-  }
+  return { mode: "join", name, sessionCode, password, url };
+}
 
-  showUserPrompt(user: string, text: string, isHost: boolean): void {
-    const color = isHost ? chalk.blue : chalk.magenta;
-    const label = isHost ? `${user} (host)` : user;
-    console.log(`\n${color.bold(`[${label}]:`)} ${text}`);
-  }
+async function runRelayWizard(name: string): Promise<WizardResult | null> {
+  const relayPort = await p.text({
+    message: "Relay server port?",
+    placeholder: "9877",
+    defaultValue: "9877",
+  }) as string;
 
-  showStreamChunk(text: string): void {
-    process.stdout.write(chalk.white(text));
-  }
+  if (p.isCancel(relayPort)) { p.cancel("Cancelled."); return null; }
 
-  showToolUse(tool: string, input: Record<string, unknown>): void {
-    const summary = tool === "Edit" || tool === "Write"
-      ? `${tool}: ${(input as any).file_path || "unknown"}`
-      : `${tool}`;
-    console.log(chalk.gray(`\n  [tool] ${summary}`));
-  }
-
-  showToolResult(tool: string, _output: string): void {
-    console.log(chalk.gray(`  [tool] ${tool} ✓`));
-  }
-
-  showTurnComplete(cost: number, durationMs: number): void {
-    const secs = (durationMs / 1000).toFixed(1);
-    console.log(chalk.gray(`\n  ── turn complete (${secs}s, $${cost.toFixed(4)}) ──\n`));
-    this.showPrompt();
-  }
-
-  showApprovalRequest(promptId: string, user: string, text: string): void {
-    this.pendingApproval = { promptId, user, text };
-    console.log("");
-    console.log(chalk.yellow.bold("  ⚠ Approval needed:"));
-    console.log(chalk.yellow(`  ${user}: "${text}"`));
-    process.stdout.write(chalk.yellow("  Approve? (y/n): "));
-  }
-
-  showError(message: string): void {
-    console.log(chalk.red(`  ✗ ${message}`));
-  }
-
-  showSystem(message: string): void {
-    console.log(chalk.gray(`  ${message}`));
-  }
-
-  private showPrompt(): void {
-    const label = this.options.role === "host"
-      ? chalk.blue(`[${this.options.userName}]`)
-      : chalk.magenta(`[${this.options.userName}]`);
-    process.stdout.write(`${label} `);
-  }
-
-  close(): void {
-    this.rl.close();
-  }
+  return { mode: "relay", name, relayPort: parseInt(relayPort, 10) };
 }
 ```
 
 **Step 2: Commit**
 
 ```bash
-git add src/ui.ts
-git commit -m "feat: add terminal UI with colored output and approval prompts"
+git add src/wizard.ts
+git commit -m "feat: add interactive setup wizard with @clack/prompts"
+```
+
+---
+
+## Task 10b: Session TUI (Ink + React)
+
+**Files:**
+- Create: `src/ui/App.tsx`
+- Create: `src/ui/StatusBar.tsx`
+- Create: `src/ui/ChatView.tsx`
+- Create: `src/ui/InputBar.tsx`
+
+The active session UI built with Ink (React for terminal), same framework as Claude Code.
+
+**Step 1: Implement the Ink components**
+
+Create `src/ui/StatusBar.tsx`:
+```tsx
+import React from "react";
+import { Box, Text } from "ink";
+
+interface Props {
+  hostUser: string;
+  guestUser?: string;
+  sessionCode: string;
+  connectionMode: string;
+  cost: number;
+  contextPercent: number;
+}
+
+export function StatusBar({ hostUser, guestUser, sessionCode, connectionMode, cost, contextPercent }: Props) {
+  return (
+    <Box justifyContent="space-between" borderStyle="single" borderColor="gray" paddingX={1}>
+      <Box gap={1}>
+        <Text color="cyan" bold>pair-vibe</Text>
+        <Text dimColor>──</Text>
+        <Text color="blue">{hostUser} (host)</Text>
+        <Text color="green">●</Text>
+        {guestUser ? (
+          <>
+            <Text color="magenta">{guestUser} (guest)</Text>
+            <Text color="green">●</Text>
+          </>
+        ) : (
+          <Text dimColor>waiting...</Text>
+        )}
+        <Text dimColor>──</Text>
+        <Text dimColor>{sessionCode}</Text>
+        <Text dimColor>──</Text>
+        <Text dimColor>{connectionMode}</Text>
+      </Box>
+      <Box gap={2}>
+        <Text dimColor>${cost.toFixed(4)}</Text>
+        <Text dimColor>{contextPercent}% ctx</Text>
+      </Box>
+    </Box>
+  );
+}
+```
+
+Create `src/ui/ChatView.tsx`:
+```tsx
+import React from "react";
+import { Box, Text } from "ink";
+
+export interface ChatMessage {
+  id: string;
+  type: "prompt" | "response" | "tool" | "system" | "session_event";
+  user?: string;
+  isHost?: boolean;
+  text: string;
+  timestamp: number;
+}
+
+interface Props {
+  messages: ChatMessage[];
+}
+
+export function ChatView({ messages }: Props) {
+  return (
+    <Box flexDirection="column" flexGrow={1} paddingX={1}>
+      {messages.map((msg) => {
+        switch (msg.type) {
+          case "prompt":
+            return (
+              <Box key={msg.id} marginTop={1}>
+                <Text color={msg.isHost ? "blue" : "magenta"} bold>
+                  [{msg.user}{msg.isHost ? " (host)" : ""}]:
+                </Text>
+                <Text> {msg.text}</Text>
+              </Box>
+            );
+          case "response":
+            return <Text key={msg.id}>{msg.text}</Text>;
+          case "tool":
+            return <Text key={msg.id} dimColor>  [tool] {msg.text}</Text>;
+          case "system":
+            return <Text key={msg.id} dimColor>  {msg.text}</Text>;
+          case "session_event":
+            return (
+              <Box key={msg.id} marginY={1}>
+                <Text color="yellow" bold>  ✦ {msg.text}</Text>
+              </Box>
+            );
+          default:
+            return null;
+        }
+      })}
+    </Box>
+  );
+}
+```
+
+Create `src/ui/App.tsx` — the root component that wires everything together:
+```tsx
+import React, { useState, useEffect } from "react";
+import { Box, useApp, useInput } from "ink";
+import { StatusBar } from "./StatusBar.js";
+import { ChatView, type ChatMessage } from "./ChatView.js";
+
+interface AppProps {
+  role: "host" | "guest";
+  userName: string;
+  sessionCode: string;
+  connectionMode: string;
+  onInput: (text: string) => void;
+  onCommand: (cmd: string) => void;
+}
+
+export function App({ role, userName, sessionCode, connectionMode, onInput, onCommand }: AppProps) {
+  const { exit } = useApp();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [guestUser, setGuestUser] = useState<string>();
+  const [cost, setCost] = useState(0);
+  const [contextPercent, setContextPercent] = useState(0);
+
+  // Expose state setters for external wiring
+  (globalThis as any).__pairVibe = {
+    addMessage: (msg: ChatMessage) => setMessages(prev => [...prev, msg]),
+    setGuestUser,
+    setCost,
+    setContextPercent,
+  };
+
+  useInput((input, key) => {
+    if (key.ctrl && input === "c") {
+      onCommand("/quit");
+      exit();
+    }
+  });
+
+  return (
+    <Box flexDirection="column" height="100%">
+      <StatusBar
+        hostUser={role === "host" ? userName : guestUser || "host"}
+        guestUser={role === "guest" ? userName : guestUser}
+        sessionCode={sessionCode}
+        connectionMode={connectionMode}
+        cost={cost}
+        contextPercent={contextPercent}
+      />
+      <ChatView messages={messages} />
+      <Box paddingX={1} borderStyle="single" borderColor="gray">
+        <Box gap={4}>
+          <Text dimColor>/end  /quit  /trust  /kick</Text>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add src/ui/
+git commit -m "feat: add Ink-based session TUI with status bar, chat view, and commands"
 ```
 
 ---
@@ -2351,6 +2509,306 @@ git commit -m "chore: finalize package.json for npm publishing"
 
 ---
 
+---
+
+## Task 13: Session Lifecycle Manager
+
+**Files:**
+- Create: `src/lifecycle.ts`
+- Create: `src/__tests__/lifecycle.test.ts`
+
+Handles clear session start/end, graceful shutdown, session summary, and logs.
+
+**Step 1: Write the test**
+
+Create `src/__tests__/lifecycle.test.ts`:
+```typescript
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { SessionLifecycle, type SessionStats } from "../lifecycle.js";
+
+describe("SessionLifecycle", () => {
+  let lifecycle: SessionLifecycle;
+
+  beforeEach(() => {
+    lifecycle = new SessionLifecycle("pv-test123", "alice");
+  });
+
+  it("tracks session start time", () => {
+    lifecycle.start();
+    expect(lifecycle.isActive()).toBe(true);
+    expect(lifecycle.getStartTime()).toBeGreaterThan(0);
+  });
+
+  it("tracks prompt counts by user", () => {
+    lifecycle.start();
+    lifecycle.recordPrompt("alice");
+    lifecycle.recordPrompt("alice");
+    lifecycle.recordPrompt("bob");
+    const stats = lifecycle.getStats();
+    expect(stats.promptsByUser["alice"]).toBe(2);
+    expect(stats.promptsByUser["bob"]).toBe(1);
+  });
+
+  it("tracks turn count and cost", () => {
+    lifecycle.start();
+    lifecycle.recordTurn(0.01, 1500);
+    lifecycle.recordTurn(0.02, 2000);
+    const stats = lifecycle.getStats();
+    expect(stats.turns).toBe(2);
+    expect(stats.totalCost).toBeCloseTo(0.03);
+  });
+
+  it("generates end summary", () => {
+    lifecycle.start();
+    lifecycle.recordPrompt("alice");
+    lifecycle.recordPrompt("bob");
+    lifecycle.recordTurn(0.05, 3000);
+    const summary = lifecycle.end("host_ended");
+    expect(summary.reason).toBe("host_ended");
+    expect(summary.stats.turns).toBe(1);
+    expect(summary.stats.totalCost).toBeCloseTo(0.05);
+    expect(summary.durationMs).toBeGreaterThan(0);
+    expect(lifecycle.isActive()).toBe(false);
+  });
+
+  it("handles multiple end calls gracefully", () => {
+    lifecycle.start();
+    const summary1 = lifecycle.end("host_ended");
+    const summary2 = lifecycle.end("host_ended");
+    expect(summary1).toBeDefined();
+    expect(summary2).toBeNull();
+  });
+});
+```
+
+**Step 2: Run test to verify it fails**
+
+```bash
+npx vitest run src/__tests__/lifecycle.test.ts
+```
+Expected: FAIL
+
+**Step 3: Implement**
+
+Create `src/lifecycle.ts`:
+```typescript
+import { writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+
+export interface SessionStats {
+  turns: number;
+  totalCost: number;
+  promptsByUser: Record<string, number>;
+}
+
+export interface SessionSummary {
+  sessionCode: string;
+  hostUser: string;
+  reason: "host_ended" | "guest_ended" | "host_quit" | "guest_quit" | "disconnected" | "sigint" | "sighup";
+  startedAt: number;
+  endedAt: number;
+  durationMs: number;
+  stats: SessionStats;
+}
+
+type EndReason = SessionSummary["reason"];
+
+export class SessionLifecycle {
+  private sessionCode: string;
+  private hostUser: string;
+  private startedAt = 0;
+  private active = false;
+  private turns = 0;
+  private totalCost = 0;
+  private promptsByUser: Record<string, number> = {};
+  private log: string[] = [];
+
+  constructor(sessionCode: string, hostUser: string) {
+    this.sessionCode = sessionCode;
+    this.hostUser = hostUser;
+  }
+
+  start(): void {
+    this.startedAt = Date.now();
+    this.active = true;
+    this.log.push(`[${new Date().toISOString()}] Session started: ${this.sessionCode}`);
+  }
+
+  isActive(): boolean {
+    return this.active;
+  }
+
+  getStartTime(): number {
+    return this.startedAt;
+  }
+
+  recordPrompt(user: string): void {
+    this.promptsByUser[user] = (this.promptsByUser[user] || 0) + 1;
+    this.log.push(`[${new Date().toISOString()}] Prompt from ${user}`);
+  }
+
+  recordTurn(cost: number, durationMs: number): void {
+    this.turns++;
+    this.totalCost += cost;
+    this.log.push(`[${new Date().toISOString()}] Turn ${this.turns}: $${cost.toFixed(4)}, ${durationMs}ms`);
+  }
+
+  getStats(): SessionStats {
+    return {
+      turns: this.turns,
+      totalCost: this.totalCost,
+      promptsByUser: { ...this.promptsByUser },
+    };
+  }
+
+  end(reason: EndReason): SessionSummary | null {
+    if (!this.active) return null;
+    this.active = false;
+    const endedAt = Date.now();
+    this.log.push(`[${new Date().toISOString()}] Session ended: ${reason}`);
+
+    const summary: SessionSummary = {
+      sessionCode: this.sessionCode,
+      hostUser: this.hostUser,
+      reason,
+      startedAt: this.startedAt,
+      endedAt,
+      durationMs: endedAt - this.startedAt,
+      stats: this.getStats(),
+    };
+
+    this.saveLog(summary);
+    return summary;
+  }
+
+  private saveLog(summary: SessionSummary): void {
+    try {
+      const dir = join(process.cwd(), ".pair-vibe", "sessions");
+      mkdirSync(dir, { recursive: true });
+      const content = [
+        `Session: ${summary.sessionCode}`,
+        `Host: ${summary.hostUser}`,
+        `Duration: ${Math.round(summary.durationMs / 1000 / 60)} minutes`,
+        `Turns: ${summary.stats.turns}`,
+        `Cost: $${summary.stats.totalCost.toFixed(4)}`,
+        `Ended: ${summary.reason}`,
+        "",
+        "--- Log ---",
+        ...this.log,
+      ].join("\n");
+      writeFileSync(join(dir, `${summary.sessionCode}.log`), content);
+    } catch {
+      // Best-effort logging — don't crash if we can't write
+    }
+  }
+}
+```
+
+**Step 4: Run tests**
+
+```bash
+npx vitest run src/__tests__/lifecycle.test.ts
+```
+Expected: PASS (all 5 tests)
+
+**Step 5: Commit**
+
+```bash
+git add src/lifecycle.ts src/__tests__/lifecycle.test.ts
+git commit -m "feat: add session lifecycle manager with stats, summary, and logging"
+```
+
+---
+
+## Task 14: Open Source Packaging
+
+**Files:**
+- Create: `LICENSE`
+- Create: `README.md`
+- Create: `CONTRIBUTING.md`
+- Create: `.github/workflows/ci.yml`
+- Modify: `package.json` (add repository, keywords, etc.)
+- Create: `.pair-vibe` entry in `.gitignore`
+
+**Step 1: Create LICENSE (MIT)**
+
+```
+MIT License
+
+Copyright (c) 2026 Eliran G
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+...
+```
+
+**Step 2: Create README.md**
+
+Include:
+- ASCII art banner
+- One-line description
+- Quick start (install, host, join)
+- Connection modes table with examples
+- Security model summary
+- Session commands (/end, /quit, /trust, /kick)
+- Contributing link
+- License
+
+**Step 3: Create CONTRIBUTING.md**
+
+Include:
+- How to set up dev environment
+- How to run tests
+- PR guidelines
+- Code of conduct reference
+
+**Step 4: Create GitHub Actions CI**
+
+Create `.github/workflows/ci.yml`:
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+```
+
+**Step 5: Update .gitignore**
+
+Add:
+```
+.pair-vibe/
+```
+
+**Step 6: Update package.json**
+
+Add repository, bugs, homepage, keywords, engines, files fields.
+
+**Step 7: Commit**
+
+```bash
+git add LICENSE README.md CONTRIBUTING.md .github/ .gitignore package.json
+git commit -m "chore: add open source packaging — LICENSE, README, CI, CONTRIBUTING"
+```
+
+---
+
+## Task 15: Integration Test — Full Flow
+
+Same as previous Task 12, renumbered.
+
+---
+
 ## Task Summary
 
 | Task | What | Tests |
@@ -2363,19 +2821,32 @@ git commit -m "chore: finalize package.json for npm publishing"
 | 6 | WebSocket server | 4 tests |
 | 7 | WebSocket client | 4 tests |
 | 8 | Prompt router + approval | 5 tests |
-| 9 | Connection layer (LAN + Cloudflare tunnel + self-hosted relay) | 3 tests |
-| 10 | Terminal UI | Visual (no tests) |
+| 9 | Connection layer (LAN + Cloudflare + SSH docs + relay) | 3 tests |
+| 10a | Setup wizard (@clack/prompts) | Visual / manual |
+| 10b | Session TUI (Ink + React) | Visual / manual |
 | 11 | CLI commands (host + join + relay) | CLI verification |
-| 12 | Integration test | 2 tests |
-| 13 | Polish & package | npm link verification |
+| 12 | Integration wiring (commands ↔ server ↔ Claude ↔ UI) | Manual |
+| 13 | Session lifecycle manager | 5 tests |
+| 14 | Open source packaging (LICENSE, README, CI, CONTRIBUTING) | CI passing |
+| 15 | Full integration test | 2 tests |
 
-**Total: 13 tasks, ~36 tests, ~13 commits**
+**Total: 15 tasks, ~41 tests, ~15 commits**
 
-**Connection modes (all E2E encrypted):**
+**Usage modes:**
 ```
-pair-vibe host                              # LAN direct (default)
-pair-vibe host --tunnel cloudflare          # Cloudflare Quick Tunnel (opt-in)
-pair-vibe host --relay wss://relay.co       # Self-hosted relay (opt-in)
+pair-vibe                                   # Interactive wizard
+pair-vibe host                              # LAN direct (default, skip wizard)
+pair-vibe host --tunnel cloudflare          # Cloudflare Quick Tunnel
+pair-vibe host --relay wss://relay.co       # Self-hosted relay
 pair-vibe relay                             # Run the relay server (~50 LOC)
 pair-vibe join <code> --url ws://...        # Any URL (SSH tunnel, VPN, etc.)
+```
+
+**Session commands:**
+```
+/end      — end session (summary shown to both users)
+/quit     — leave session (host leaving = session ends)
+/trust    — toggle approval mode off
+/kick     — remove partner (host only)
+Ctrl+C    — graceful shutdown with summary
 ```
