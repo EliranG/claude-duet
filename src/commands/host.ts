@@ -47,8 +47,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
     connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
   }
 
-  ui.showWelcome(session.code, session.password);
-  ui.showSystem(`Connect URL: ${connInfo.displayUrl}`);
+  ui.showWelcome(session.code, session.password, connInfo.displayUrl);
   ui.startInputLoop();
 
   claude.on("event", (event) => {

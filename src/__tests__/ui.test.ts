@@ -54,4 +54,12 @@ describe("TerminalUI", () => {
     ui.showWelcome("pv-abc123", "secret");
     expect(console.log).toHaveBeenCalled();
   });
+
+  it("showWelcome displays a copy-paste join command", () => {
+    ui = new TerminalUI({ userName: "alice", role: "host" });
+    ui.showWelcome("pv-abc123", "secret", "ws://192.168.1.5:4567");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("npx pair-vibe join pv-abc123 --password secret --url ws://192.168.1.5:4567");
+  });
 });

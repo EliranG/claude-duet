@@ -39,12 +39,21 @@ export class TerminalUI {
     if (this.approvalHandler) this.approvalHandler(promptId, approved);
   }
 
-  showWelcome(sessionCode: string, password: string): void {
+  showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
     console.log("");
     console.log(pc.bold(pc.cyan("  \u2726 pair-vibe session started")));
     console.log(`  Session code: ${pc.bold(sessionCode)}`);
     console.log(`  Password: ${pc.bold(password)}`);
-    console.log(`  Share these with your partner to join.`);
+    if (connectUrl) {
+      console.log(`  Connect URL: ${pc.bold(connectUrl)}`);
+      console.log("");
+      console.log(pc.bold("  Share this command with your partner:"));
+      console.log("");
+      const joinCmd = `npx pair-vibe join ${sessionCode} --password ${password} --url ${connectUrl}`;
+      console.log(`  ${pc.green(pc.bold(joinCmd))}`);
+    } else {
+      console.log(`  Share these with your partner to join.`);
+    }
     console.log("");
   }
 
