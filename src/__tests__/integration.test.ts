@@ -101,6 +101,46 @@ describe("integration: host + guest full flow", () => {
     expect(sendPromptSpy).toHaveBeenCalledWith("alice", "fix the tests", { isHost: true });
   });
 
+  it("host prompt is broadcast to guest exactly once", async () => {
+    server = new PairVibeServer({
+      hostUser: "alice",
+      password: "test1234",
+    });
+    const port = await server.start();
+
+    const claude = new ClaudeBridge();
+    vi.spyOn(claude, "sendPrompt").mockResolvedValue(undefined);
+
+    const router = new PromptRouter(claude, server, {
+      hostUser: "alice",
+      approvalMode: false,
+    });
+
+    client = new PairVibeClient();
+    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+
+    const received: any[] = [];
+    client.on("message", (msg) => {
+      if (msg.type === "prompt_received") received.push(msg);
+    });
+
+    // Simulate host typing — only router.handlePrompt (not a second broadcast)
+    const msg = {
+      type: "prompt" as const,
+      id: "host-1",
+      user: "alice",
+      text: "hello bob",
+      timestamp: Date.now(),
+    };
+    router.handlePrompt(msg);
+    await new Promise((r) => setTimeout(r, 200));
+
+    // Should receive EXACTLY one prompt_received, not two
+    expect(received).toHaveLength(1);
+    expect(received[0].user).toBe("alice");
+    expect(received[0].text).toBe("hello bob");
+  });
+
   it("guest receives streamed responses", async () => {
     server = new PairVibeServer({
       hostUser: "alice",

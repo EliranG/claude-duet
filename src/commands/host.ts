@@ -104,7 +104,6 @@ export async function hostCommand(options: HostOptions): Promise<void> {
       timestamp: Date.now(),
     };
     ui.showUserPrompt(options.name, text, true);
-    server.broadcast({ type: "prompt_received", promptId: msg.id, user: msg.user, text: msg.text, timestamp: Date.now() });
     router.handlePrompt(msg);
   });
 
