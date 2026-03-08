@@ -32,6 +32,8 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
   client.on("message", (msg) => {
     switch (msg.type) {
       case "prompt_received":
+        // Skip own messages (already shown locally when typed)
+        if (msg.user === options.name) break;
         ui.showUserPrompt(msg.user, msg.text, false);
         break;
       case "stream_chunk":
@@ -53,6 +55,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
   });
 
   ui.onInput((text) => {
+    ui.showUserPrompt(options.name, text, false);
     client.sendPrompt(text);
   });
 

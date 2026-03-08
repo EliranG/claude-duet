@@ -39,6 +39,16 @@ describe("TerminalUI", () => {
     expect(() => ui.startInputLoop()).not.toThrow();
   });
 
+  it("showUserPrompt displays formatted message", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.showUserPrompt("bob", "hello world", false);
+    expect(console.log).toHaveBeenCalled();
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("bob");
+    expect(output).toContain("hello world");
+  });
+
   it("showWelcome displays session info", () => {
     ui = new TerminalUI({ userName: "alice", role: "host" });
     ui.showWelcome("pv-abc123", "secret");
