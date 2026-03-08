@@ -1,5 +1,6 @@
 import pc from "picocolors";
 import * as readline from "node:readline";
+import { pickSessionBackground, applyBackground, restoreBackground, type SessionBackground } from "./terminal-colors.js";
 
 interface TerminalUIOptions {
   userName: string;
@@ -11,6 +12,7 @@ export class TerminalUI {
   private inputHandler?: (text: string) => void;
   private approvalHandler?: (promptId: string, approved: boolean) => void;
   private rl?: readline.Interface;
+  private background?: SessionBackground;
 
   constructor(options: TerminalUIOptions) {
     this.options = options;
@@ -40,6 +42,8 @@ export class TerminalUI {
   }
 
   showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
+    this.background = pickSessionBackground();
+    process.stdout.write(applyBackground(this.background));
     console.log("");
     console.log(pc.bold(pc.cyan("  \u2726 pair-vibe session started")));
     console.log(`  Session code: ${pc.bold(sessionCode)}`);
@@ -119,5 +123,9 @@ export class TerminalUI {
   close(): void {
     this.rl?.close();
     this.rl = undefined;
+    if (this.background) {
+      process.stdout.write(restoreBackground());
+      this.background = undefined;
+    }
   }
 }
