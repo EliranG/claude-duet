@@ -1,0 +1,61 @@
+{
+  "name": "pair-vibe",
+  "version": "0.1.0",
+  "description": "Pair vibe coding — share a Claude Code session with a partner",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "pair-vibe": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "claude",
+    "pair-programming",
+    "ai",
+    "collaboration",
+    "vibe-coding"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elirang/pair-vibe"
+  },
+  "bugs": {
+    "url": "https://github.com/elirang/pair-vibe/issues"
+  },
+  "homepage": "https://github.com/elirang/pair-vibe#readme",
+  "dependencies": {
+    "@clack/prompts": "^1.1.0",
+    "@inkjs/ui": "^2.0.0",
+    "commander": "^13.1.0",
+    "ink": "^5.2.1",
+    "nanoid": "^5.1.6",
+    "picocolors": "^1.1.1",
+    "qrcode-terminal": "^0.12.0",
+    "react": "^18.3.1",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "@types/react": "^19.2.14",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
