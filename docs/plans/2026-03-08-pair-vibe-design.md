@@ -236,6 +236,25 @@ User A's machine (host)
 - Partner disconnect triggers reconnect/end choice
 - Session logs saved locally for audit
 
+### 8. Signature visual identity — violet `✦`
+Claude Code owns the orange `✦`. Pair-vibe uses the same symbol in **violet/purple** (blue + red = two people).
+
+**Layered indicator system** (each terminal gets the best it supports):
+
+| Layer | What | Support |
+|-------|------|---------|
+| 1 (universal) | Violet `✦` in status bar + prompt | All terminals |
+| 1 (universal) | Terminal title: `pair-vibe ✦ alice + bob` | All terminals |
+| 1 (universal) | Cursor shape → underline while in session | All modern terminals |
+| 2 (enhanced) | Cursor color → violet (#9B59B6) | Kitty, WezTerm, Ghostty |
+| 2 (enhanced) | iTerm2 badge: translucent `PAIR VIBING` watermark | iTerm2 only |
+| 2 (enhanced) | iTerm2 tab color → violet | iTerm2 only |
+| 2 (enhanced) | Desktop notification on partner join/disconnect | All (node-notifier) |
+| 3 (personality) | Subtle chime on partner join | macOS (afplay) |
+| 3 (personality) | `✦` pulses when partner is typing | All (via Ink animation) |
+
+All indicators are **restored on exit** — cursor, title, tab color revert to original state.
+
 ## Session Lifecycle
 
 ```
