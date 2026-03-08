@@ -5,6 +5,7 @@ import {
   isJoinRequest,
   isPromptMessage,
   isApprovalResponse,
+  isChatMessage,
 } from "./protocol.js";
 
 export interface ServerOptions {
@@ -103,6 +104,17 @@ export class ClaudeDuetServer extends EventEmitter {
       this.emit("approval_response", msg);
       return;
     }
+
+    if (isChatMessage(msg)) {
+      this.broadcast({
+        type: "chat_received",
+        user: msg.user,
+        text: msg.text,
+        timestamp: Date.now(),
+      });
+      this.emit("chat", msg);
+      return;
+    }
   }
 
   broadcast(msg: ServerMessage): void {
@@ -117,6 +129,19 @@ export class ClaudeDuetServer extends EventEmitter {
   private send(ws: WebSocket, msg: ServerMessage): void {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(msg));
+    }
+  }
+
+  kickGuest(): void {
+    if (this.guest) {
+      this.send(this.guest, {
+        type: "error",
+        message: "You have been disconnected by the host.",
+        timestamp: Date.now(),
+      });
+      this.guest.close();
+      this.guest = undefined;
+      this.guestUser = undefined;
     }
   }
 

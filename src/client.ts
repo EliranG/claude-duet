@@ -78,6 +78,21 @@ export class ClaudeDuetClient extends EventEmitter {
     );
   }
 
+  sendChat(text: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error("Not connected");
+    }
+    this.ws.send(
+      JSON.stringify({
+        type: "chat",
+        id: nanoid(8),
+        user: this.user!,
+        text,
+        timestamp: Date.now(),
+      } satisfies ClientMessage),
+    );
+  }
+
   sendApprovalResponse(promptId: string, approved: boolean): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     this.ws.send(

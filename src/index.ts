@@ -4,6 +4,8 @@ import { Command } from "commander";
 import { hostCommand } from "./commands/host.js";
 import { joinCommand } from "./commands/join.js";
 import { startRelayServer } from "./relay-server.js";
+import { configShowCommand, configSetCommand, configGetCommand, configPathCommand } from "./commands/config.js";
+import { loadConfig } from "./config.js";
 
 const program = new Command();
 
@@ -21,12 +23,13 @@ program
   .option("--relay <url>", "use a relay server for remote access")
   .option("-p, --port <port>", "WebSocket server port", "0")
   .action((options) => {
+    const config = loadConfig();
     hostCommand({
-      name: options.name,
-      noApproval: !options.approval,
-      tunnel: options.tunnel,
-      relay: options.relay,
-      port: parseInt(options.port, 10),
+      name: options.name !== process.env.USER ? options.name : (config.name || options.name),
+      noApproval: !options.approval || config.approvalMode === false,
+      tunnel: options.tunnel || config.tunnel,
+      relay: options.relay || config.relay,
+      port: parseInt(options.port, 10) || config.port || 0,
     });
   });
 
@@ -42,8 +45,9 @@ program
       console.error("Error: --password is required");
       process.exit(1);
     }
+    const config = loadConfig();
     joinCommand(sessionCode, {
-      name: options.name,
+      name: options.name !== (process.env.USER || "guest") ? options.name : (config.name || options.name),
       password: options.password,
       url: options.url,
     });
@@ -56,5 +60,26 @@ program
   .action((options) => {
     startRelayServer(parseInt(options.port, 10));
   });
+
+const configCmd = program
+  .command("config")
+  .description("View and manage claude-duet configuration")
+  .action(() => configShowCommand());
+
+configCmd
+  .command("set <key> <value>")
+  .description("Set a config value")
+  .option("--project", "save to project config (.claude-duet.json)")
+  .action((key, value, options) => configSetCommand(key, value, options));
+
+configCmd
+  .command("get <key>")
+  .description("Get a config value")
+  .action((key) => configGetCommand(key));
+
+configCmd
+  .command("path")
+  .description("Show config file paths")
+  .action(() => configPathCommand());
 
 program.parse();

@@ -32,6 +32,13 @@ export interface JoinRequest extends BaseMessage {
   passwordHash: string;
 }
 
+export interface ChatMessage extends BaseMessage {
+  type: "chat";
+  id: string;
+  user: string;
+  text: string;
+}
+
 // ---- Server → Client(s) ----
 
 export interface JoinAccepted extends BaseMessage {
@@ -98,26 +105,41 @@ export interface ErrorMessage extends BaseMessage {
   message: string;
 }
 
+export interface ChatReceived extends BaseMessage {
+  type: "chat_received";
+  user: string;
+  text: string;
+}
+
+export interface ApprovalStatusMessage extends BaseMessage {
+  type: "approval_status";
+  promptId: string;
+  status: "pending" | "approved" | "rejected";
+}
+
 // ---- Union Types ----
 
 export type ClientMessage =
   | PromptMessage
   | TypingMessage
   | ApprovalResponse
-  | JoinRequest;
+  | JoinRequest
+  | ChatMessage;
 
 export type ServerMessage =
   | JoinAccepted
   | JoinRejected
   | PromptReceived
   | ApprovalRequest
+  | ApprovalStatusMessage
   | StreamChunk
   | ToolUseMessage
   | ToolResultMessage
   | TurnComplete
   | PresenceMessage
   | NoticeMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | ChatReceived;
 
 export type Message = ClientMessage | ServerMessage;
 
@@ -145,6 +167,10 @@ export function isPresenceMessage(msg: unknown): msg is PresenceMessage {
 
 export function isJoinRequest(msg: unknown): msg is JoinRequest {
   return isObject(msg) && msg.type === "join";
+}
+
+export function isChatMessage(msg: unknown): msg is ChatMessage {
+  return isObject(msg) && msg.type === "chat";
 }
 
 function isObject(val: unknown): val is Record<string, unknown> {

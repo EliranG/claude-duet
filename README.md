@@ -1,112 +1,171 @@
 <div align="center">
 
-# claude-duet
+# ✦ claude-duet
 
-**Two developers, one Claude. Claude duet coding in real-time.**
+**Two devs. One Claude. Pure vibes.**
 
 [![npm version](https://img.shields.io/npm/v/claude-duet)](https://www.npmjs.com/package/claude-duet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Share your AI coding session with a partner. Host runs the AI,
-partner sends prompts — both see everything in real-time.
+Vibe code with a friend — share your Claude Code session in real-time.
+Chat with each other, summon Claude together, ship faster.
 
 </div>
 
 ---
 
-> **Currently supports [Claude Code](https://claude.ai/code) (Anthropic's CLI).**
-> Support for other AI coding tools (Codex CLI, Gemini CLI, etc.) is planned for future releases.
+> ✦ Currently vibing with [Claude Code](https://claude.ai/code) (Anthropic's CLI).
+> More AI coding tools coming soon.
 
-## Quick Start
+## ⚡ 30-Second Setup
 
 ```bash
-# Host a session (installs automatically via npx)
+# You host it
 npx claude-duet host
 
-# Share the join command shown in your terminal with your partner
-# They run it — that's it!
-```
-
-The host terminal will display a ready-to-share command like:
-
-```
+# Your partner joins (copy the command from your terminal)
 npx claude-duet join cd-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
 ```
 
-Send it via Slack, Discord, or any chat. Your partner runs it and you're paired up.
+That's it. Send the join command via Slack, Discord, carrier pigeon — whatever works. ✌︎
 
-## How It Works
+## ✦ The Vibes
 
 ```
 ┌──────────────┐     WebSocket      ┌──────────────┐
-│   Host       │◄──────────────────►│   Partner    │
-│   Claude Code│     encrypted      │   Terminal   │
+│   You        │◄══════════════════►│   Partner    │
+│   Claude Code│    E2E encrypted   │   Terminal   │
 │   + Server   │                    │   Client     │
 └──────────────┘                    └──────────────┘
 ```
 
-1. **Host** runs Claude Code locally via the Agent SDK and starts a WebSocket server
-2. **Partner** connects and sends prompts to the shared session
-3. **Both** see Claude's responses stream in real-time
-4. All communication is **end-to-end encrypted** (NaCl secretbox)
-5. **Approval mode** (default): host reviews partner prompts before execution
+1. **You** host — Claude runs on your machine
+2. **Partner** connects — types prompts, sees everything live
+3. **Chat freely** — regular messages stay between you two
+4. **Summon Claude** — prefix with `@claude` and it goes to the AI
+5. **Stay in control** — approve or reject partner's Claude prompts with a single keypress
 
-## Connection Modes
+## ☯︎ Chat vs Claude
 
-| Mode | Command | Use Case |
-|------|---------|----------|
-| **LAN Direct** | `npx claude-duet host` | Same network, zero config |
-| **SSH Tunnel** | `ssh -L 3000:localhost:3000 host` | Remote, proven security |
-| **Cloudflare Tunnel** | `npx claude-duet host --tunnel cloudflare` | Remote, no server needed |
-| **Self-hosted Relay** | `npx claude-duet host --relay wss://relay.example.com` | Custom infrastructure |
-
-## Security
-
-- **E2E Encryption** — NaCl secretbox (XSalsa20-Poly1305) with scrypt key derivation
-- **Approval Mode** — Host reviews partner prompts before execution (on by default)
-- **No Third-Party Relay** — LAN direct is default; SSH recommended for remote
-- **Host Controls** — All Claude Code operations run on the host machine only
-
-## Commands
+This is the core idea — you can **talk to each other** without bugging Claude, and **invoke Claude together** when you need the big brain.
 
 ```
+[Benji]:
+  hey, what file handles login?
+
+[Eliran (host)]:
+  src/auth.ts — let me get Claude on it
+
+[Eliran (host)] → ✦ Claude:
+  look at src/auth.ts and explain the login flow
+
+  ✦ Claude is thinking...
+  The login flow works by...
+```
+
+| What you type | What happens |
+|---------------|--------------|
+| `hello!` | Chat with your partner ☞ Claude stays chill |
+| `@claude fix the bug` | Sent to Claude ☞ both of you see the response |
+| `/help` | Show available commands |
+| `/status` | Session info — who's connected, duration |
+| `/leave` | Graceful exit with session summary |
+
+## ⌘ Commands
+
+### CLI
+
+```bash
 npx claude-duet                          # Interactive wizard
 npx claude-duet host                     # Host on LAN (default)
-npx claude-duet host --no-approval       # Host without approval mode
+npx claude-duet host --no-approval       # Trust mode — no prompt review
 npx claude-duet host --tunnel cloudflare # Host via Cloudflare tunnel
 npx claude-duet relay                    # Run a relay server
-npx claude-duet join <code> --password <pw> --url <url>  # Join a session
+npx claude-duet join <code> --password <pw> --url <url>
 ```
 
-## Session Commands
+### In-Session
 
-| Command | Description |
-|---------|-------------|
-| `Ctrl+C` | Graceful shutdown with session summary |
+| Command | Who | What it does |
+|---------|-----|-------------|
+| `/help` | everyone | Show all commands |
+| `/status` | everyone | Session info, duration, who's connected |
+| `/clear` | everyone | Clear the terminal |
+| `/leave` | everyone | Leave with session summary |
+| `/trust` | host | Disable approval — partner prompts go straight to Claude |
+| `/approval` | host | Re-enable approval mode |
+| `/kick` | host | Disconnect the guest |
 
-## Roadmap
+## ⚙︎ Configuration
 
-- [ ] Support for additional AI coding tools (Codex CLI, Gemini CLI, etc.)
+Save your preferences so you don't have to type them every time.
+
+```bash
+# Set your name globally
+claude-duet config set name "Eliran"
+
+# Set project-specific settings
+claude-duet config set approvalMode false --project
+
+# See what's configured
+claude-duet config
+
+# Check where configs live
+claude-duet config path
+```
+
+| Level | File | Scope |
+|-------|------|-------|
+| User | `~/.config/claude-duet/config.json` | All sessions |
+| Project | `.claude-duet.json` | This repo only |
+
+Project overrides user. CLI flags override everything.
+
+## ☷ Connection Modes
+
+| Mode | Command | When |
+|------|---------|------|
+| **LAN Direct** | `npx claude-duet host` | Same Wi-Fi / VPN — zero config |
+| **SSH Tunnel** | `ssh -L 3000:localhost:3000 host` | Remote — rock solid security |
+| **Cloudflare Tunnel** | `npx claude-duet host --tunnel cloudflare` | Remote — no server needed |
+| **Self-hosted Relay** | `npx claude-duet host --relay wss://relay.example.com` | Your infra, your rules |
+
+## ⊘ Security
+
+Not an afterthought.
+
+- **E2E Encrypted** — NaCl secretbox (XSalsa20-Poly1305) + scrypt key derivation
+- **Approval Mode** — you review every partner prompt before it touches Claude (default: on)
+- **No Third-Party Relay** — LAN direct by default. Your data stays on your network
+- **Host Controls Everything** — Claude runs on your machine, your API key, your filesystem
+
+## ◈ Roadmap
+
+- [ ] Support for more AI tools (Codex CLI, Gemini CLI, Copilot)
 - [ ] Rich terminal UI with Ink (React for the terminal)
 - [ ] Session recording and playback
-- [ ] Multi-guest sessions
+- [ ] Multi-guest sessions (trio coding?)
+- [ ] Voice chat integration
 
-## Development
+## ⌥ Development
 
 ```bash
 git clone https://github.com/elirang/claude-duet.git
 cd claude-duet
 npm install
 npm run build
-npm test
+npm test                # 92 tests across 15 files
+npm run test:session    # Live demo with two Terminal windows
 ```
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — go wild.
 
 ---
 
 <div align="center">
-<sub>Built with Claude Code</sub>
+
+✦ Built by vibing with [Claude Code](https://claude.ai/code) ✦
+
 </div>

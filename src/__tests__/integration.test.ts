@@ -141,6 +141,27 @@ describe("integration: host + guest full flow", () => {
     expect(received[0].text).toBe("hello bob");
   });
 
+  it("chat messages are not sent to Claude", async () => {
+    server = new ClaudeDuetServer({
+      hostUser: "alice",
+      password: "test1234",
+    });
+    const port = await server.start();
+
+    const claude = new ClaudeBridge();
+    const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockResolvedValue(undefined);
+
+    client = new ClaudeDuetClient();
+    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+
+    // Guest sends a chat (not a prompt)
+    client.sendChat("just chatting");
+    await new Promise((r) => setTimeout(r, 100));
+
+    // Claude should NOT have been called
+    expect(sendPromptSpy).not.toHaveBeenCalled();
+  });
+
   it("guest receives streamed responses", async () => {
     server = new ClaudeDuetServer({
       hostUser: "alice",
