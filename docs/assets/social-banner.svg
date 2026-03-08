@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f23;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1a3e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)" />
+
+  <!-- Decorative circles -->
+  <circle cx="200" cy="320" r="300" fill="#7c3aed" opacity="0.03" />
+  <circle cx="1080" cy="320" r="300" fill="#7c3aed" opacity="0.03" />
+
+  <!-- Accent line -->
+  <rect x="540" y="200" width="200" height="3" rx="1.5" fill="url(#accent)" opacity="0.6" />
+
+  <!-- Star symbol -->
+  <text x="640" y="270" font-family="system-ui, -apple-system, sans-serif" font-size="48" fill="#7c3aed" text-anchor="middle" opacity="0.9">&#10022;</text>
+
+  <!-- Main title -->
+  <text x="640" y="350" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="-2">claude-duet</text>
+
+  <!-- Tagline -->
+  <text x="640" y="410" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#a78bfa" text-anchor="middle" font-weight="300">Two developers, one Claude</text>
+
+  <!-- Description -->
+  <text x="640" y="460" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#8888aa" text-anchor="middle">Share a Claude Code session in real-time with E2E encryption</text>
+
+  <!-- Accent line bottom -->
+  <rect x="540" y="490" width="200" height="3" rx="1.5" fill="url(#accent)" opacity="0.6" />
+
+  <!-- Footer icons representing two users -->
+  <text x="600" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#555577" text-anchor="middle">&#9679; Host</text>
+  <text x="640" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#7c3aed" text-anchor="middle">&#10022;</text>
+  <text x="680" y="560" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#555577" text-anchor="middle">Guest &#9679;</text>
+</svg>
