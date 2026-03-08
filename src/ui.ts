@@ -1,4 +1,6 @@
 import pc from "picocolors";
+import * as readline from "node:readline";
+import { pickSessionBackground, applyBackground, restoreBackground, type SessionBackground } from "./terminal-colors.js";
 
 interface TerminalUIOptions {
   userName: string;
@@ -9,17 +11,56 @@ export class TerminalUI {
   private options: TerminalUIOptions;
   private inputHandler?: (text: string) => void;
   private approvalHandler?: (promptId: string, approved: boolean) => void;
+  private rl?: readline.Interface;
+  private background?: SessionBackground;
 
   constructor(options: TerminalUIOptions) {
     this.options = options;
   }
 
-  showWelcome(sessionCode: string, password: string): void {
+  startInputLoop(): void {
+    if (this.rl) return;
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: "",
+    });
+    this.rl.on("line", (line) => {
+      const trimmed = line.trim();
+      if (trimmed && this.inputHandler) {
+        this.inputHandler(trimmed);
+      }
+    });
+  }
+
+  simulateInput(text: string): void {
+    if (this.inputHandler) this.inputHandler(text);
+  }
+
+  simulateApproval(promptId: string, approved: boolean): void {
+    if (this.approvalHandler) this.approvalHandler(promptId, approved);
+  }
+
+  showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
+    this.background = pickSessionBackground();
+    process.stdout.write(applyBackground(this.background));
     console.log("");
     console.log(pc.bold(pc.cyan("  \u2726 pair-vibe session started")));
     console.log(`  Session code: ${pc.bold(sessionCode)}`);
     console.log(`  Password: ${pc.bold(password)}`);
-    console.log(`  Share these with your partner to join.`);
+    if (connectUrl) {
+      console.log(`  Connect URL: ${pc.bold(connectUrl)}`);
+      console.log("");
+      console.log(pc.bold("  Share this command with your partner:"));
+      console.log("");
+      const joinCmd = `npx pair-vibe join ${sessionCode} --password ${password} --url ${connectUrl}`;
+      console.log(`  ${pc.green(pc.bold(joinCmd))}`);
+      console.log("");
+      console.log(pc.dim("  Slack-friendly message (copy & share):"));
+      console.log(pc.dim(`  Hey! Join my pair-vibe session: \`${joinCmd}\``));
+    } else {
+      console.log(`  Share these with your partner to join.`);
+    }
     console.log("");
   }
 
@@ -80,6 +121,11 @@ export class TerminalUI {
   }
 
   close(): void {
-    // Cleanup if needed
+    this.rl?.close();
+    this.rl = undefined;
+    if (this.background) {
+      process.stdout.write(restoreBackground());
+      this.background = undefined;
+    }
   }
 }

@@ -23,6 +23,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
       ui.showSystem("Approval mode is ON \u2014 host will review your prompts.");
     }
     console.log("");
+    ui.startInputLoop();
   } catch (err) {
     ui.showError(`Failed to join: ${err instanceof Error ? err.message : err}`);
     process.exit(1);
@@ -31,6 +32,8 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
   client.on("message", (msg) => {
     switch (msg.type) {
       case "prompt_received":
+        // Skip own messages (already shown locally when typed)
+        if (msg.user === options.name) break;
         ui.showUserPrompt(msg.user, msg.text, false);
         break;
       case "stream_chunk":
@@ -52,6 +55,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
   });
 
   ui.onInput((text) => {
+    ui.showUserPrompt(options.name, text, false);
     client.sendPrompt(text);
   });
 
@@ -71,7 +75,8 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
 async function resolveSessionUrl(sessionCode: string): Promise<string> {
   throw new Error(
-    `Cannot resolve session "${sessionCode}" \u2014 use --url to specify the server URL directly.\n` +
-    `  Example: pair-vibe join ${sessionCode} --url ws://localhost:3000`
+    `Session discovery not available \u2014 use --url to connect directly.\n` +
+    `  Ask the host for the join command, or run:\n` +
+    `  pair-vibe join ${sessionCode} --password <password> --url ws://<host-ip>:<port>`
   );
 }

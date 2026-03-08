@@ -47,8 +47,8 @@ export async function hostCommand(options: HostOptions): Promise<void> {
     connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
   }
 
-  ui.showWelcome(session.code, session.password);
-  ui.showSystem(`Connect URL: ${connInfo.displayUrl}`);
+  ui.showWelcome(session.code, session.password, connInfo.displayUrl);
+  ui.startInputLoop();
 
   claude.on("event", (event) => {
     switch (event.type) {
@@ -103,7 +103,6 @@ export async function hostCommand(options: HostOptions): Promise<void> {
       timestamp: Date.now(),
     };
     ui.showUserPrompt(options.name, text, true);
-    server.broadcast({ type: "prompt_received", promptId: msg.id, user: msg.user, text: msg.text, timestamp: Date.now() });
     router.handlePrompt(msg);
   });
 
