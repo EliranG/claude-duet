@@ -1,4 +1,4 @@
-import { PairVibeServer } from "../server.js";
+import { ClaudeDuetServer } from "../server.js";
 import { ClaudeBridge } from "../claude.js";
 import { PromptRouter } from "../router.js";
 import { TerminalUI } from "../ui.js";
@@ -20,7 +20,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
 
   const ui = new TerminalUI({ userName: options.name, role: "host" });
   const claude = new ClaudeBridge();
-  const server = new PairVibeServer({
+  const server = new ClaudeDuetServer({
     hostUser: options.name,
     password: session.password,
     approvalMode,

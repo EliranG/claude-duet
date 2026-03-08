@@ -1,4 +1,4 @@
-import { PairVibeClient } from "../client.js";
+import { ClaudeDuetClient } from "../client.js";
 import { TerminalUI } from "../ui.js";
 
 interface JoinOptions {
@@ -14,11 +14,11 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
   ui.showSystem(`Connecting to ${serverUrl}...`);
 
-  const client = new PairVibeClient();
+  const client = new ClaudeDuetClient();
 
   try {
     const result = await client.connect(serverUrl, options.name, options.password);
-    ui.showSystem(`Connected! You're pair vibing with ${result.hostUser}.`);
+    ui.showSystem(`Connected! You're duet coding with ${result.hostUser}.`);
     if (result.approvalMode) {
       ui.showSystem("Approval mode is ON \u2014 host will review your prompts.");
     }
@@ -77,6 +77,6 @@ async function resolveSessionUrl(sessionCode: string): Promise<string> {
   throw new Error(
     `Session discovery not available \u2014 use --url to connect directly.\n` +
     `  Ask the host for the join command, or run:\n` +
-    `  pair-vibe join ${sessionCode} --password <password> --url ws://<host-ip>:<port>`
+    `  claude-duet join ${sessionCode} --password <password> --url ws://<host-ip>:<port>`
   );
 }

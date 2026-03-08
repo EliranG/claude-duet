@@ -100,7 +100,7 @@ export class SessionLifecycle {
 
   private saveLog(summary: SessionSummary): void {
     try {
-      const dir = join(process.cwd(), ".pair-vibe", "sessions");
+      const dir = join(process.cwd(), ".claude-duet", "sessions");
       mkdirSync(dir, { recursive: true });
       const content = [
         `Session: ${summary.sessionCode}`,

@@ -1,11 +1,11 @@
 {
-  "name": "pair-vibe",
+  "name": "claude-duet",
   "version": "0.1.0",
-  "description": "Pair vibe coding — share a Claude Code session with a partner",
+  "description": "Claude Duet — share a Claude Code session with a partner",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "pair-vibe": "dist/index.js"
+    "claude-duet": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -32,12 +32,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/elirang/pair-vibe"
+    "url": "https://github.com/elirang/claude-duet"
   },
   "bugs": {
-    "url": "https://github.com/elirang/pair-vibe/issues"
+    "url": "https://github.com/elirang/claude-duet/issues"
   },
-  "homepage": "https://github.com/elirang/pair-vibe#readme",
+  "homepage": "https://github.com/elirang/claude-duet#readme",
   "dependencies": {
     "@clack/prompts": "^1.1.0",
     "@inkjs/ui": "^2.0.0",

@@ -8,13 +8,13 @@ import { startRelayServer } from "./relay-server.js";
 const program = new Command();
 
 program
-  .name("pair-vibe")
-  .description("Pair vibe coding \u2014 share a Claude Code session with a partner")
+  .name("claude-duet")
+  .description("Claude Duet \u2014 share a Claude Code session with a partner")
   .version("0.1.0");
 
 program
   .command("host")
-  .description("Start a pair-vibe session as host")
+  .description("Start a claude-duet session as host")
   .option("-n, --name <name>", "your display name", process.env.USER || "host")
   .option("--no-approval", "disable approval mode (trust your partner)")
   .option("--tunnel <provider>", "use a tunnel for remote access (cloudflare)")
@@ -32,7 +32,7 @@ program
 
 program
   .command("join <session-code>")
-  .description("Join an existing pair-vibe session")
+  .description("Join an existing claude-duet session")
   .option("-n, --name <name>", "your display name", process.env.USER || "guest")
   .option("--password <password>", "session password")
   .option("--url <url>", "WebSocket URL (direct, SSH tunnel, VPN, etc.)")
@@ -51,7 +51,7 @@ program
 
 program
   .command("relay")
-  .description("Run a self-hosted relay server for remote pair-vibe sessions")
+  .description("Run a self-hosted relay server for remote claude-duet sessions")
   .option("-p, --port <port>", "relay server port", "9877")
   .action((options) => {
     startRelayServer(parseInt(options.port, 10));

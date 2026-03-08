@@ -1,4 +1,4 @@
-# Contributing to pair-vibe
+# Contributing to claude-duet
 
 Thanks for your interest in contributing! Here's how to get started.
 
@@ -6,8 +6,8 @@ Thanks for your interest in contributing! Here's how to get started.
 
 ```bash
 # Clone the repo
-git clone https://github.com/elirang/pair-vibe.git
-cd pair-vibe
+git clone https://github.com/elirang/claude-duet.git
+cd claude-duet
 
 # Install dependencies
 npm install
@@ -79,7 +79,7 @@ src/
 
 ## Reporting Issues
 
-Open an issue at [github.com/elirang/pair-vibe/issues](https://github.com/elirang/pair-vibe/issues) with:
+Open an issue at [github.com/elirang/claude-duet/issues](https://github.com/elirang/claude-duet/issues) with:
 
 - Steps to reproduce
 - Expected vs actual behavior

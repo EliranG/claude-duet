@@ -13,7 +13,7 @@ export interface ServerOptions {
   approvalMode?: boolean;
 }
 
-export class PairVibeServer extends EventEmitter {
+export class ClaudeDuetServer extends EventEmitter {
   private wss?: WebSocketServer;
   private guest?: WebSocket;
   private guestUser?: string;

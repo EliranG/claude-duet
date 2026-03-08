@@ -3,7 +3,7 @@ import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
 import type { ClientMessage, ServerMessage, JoinAccepted } from "./protocol.js";
 
-export class PairVibeClient extends EventEmitter {
+export class ClaudeDuetClient extends EventEmitter {
   private ws?: WebSocket;
   private user?: string;
 

@@ -1,6 +1,6 @@
 # Terminal Visual Indicators & Customizations: Comprehensive Technical Reference
 
-Research compiled for pair-vibing CLI tool. Covers every technique a CLI can use to create a distinctive "active session" feel in a terminal.
+Research compiled for duet-coding CLI tool. Covers every technique a CLI can use to create a distinctive "active session" feel in a terminal.
 
 ---
 
@@ -141,7 +141,7 @@ function setTerminalTitle(title: string): void {
 }
 
 // Dynamic title with session info
-setTerminalTitle('pair-vibe \u25cf alice + bob');
+setTerminalTitle('claude-duet \u25cf alice + bob');
 
 // Clear/restore title (set to empty)
 process.stdout.write('\x1b]0;\x07');
@@ -184,7 +184,7 @@ For tmux, you may also need `set -g set-titles on` and `set -g set-titles-string
 
 ```typescript
 // Set tab title (distinct from window title in some terminals)
-process.stdout.write('\x1b]1;pair-vibe session\x07');
+process.stdout.write('\x1b]1;claude-duet session\x07');
 ```
 
 Works in iTerm2, WezTerm, and some others. In many terminals, OSC 0 sets both.
@@ -459,7 +459,7 @@ There is no ANSI escape sequence to draw an actual border around the terminal vi
 ```typescript
 // Full-width reverse-video line as a "banner"
 const cols = process.stdout.columns || 80;
-const text = ' pair-vibe \u25cf alice + bob ';
+const text = ' claude-duet \u25cf alice + bob ';
 const padding = ' '.repeat(Math.max(0, cols - text.length));
 process.stdout.write(`\x1b[7m${text}${padding}\x1b[27m\n`);
 ```
@@ -475,7 +475,7 @@ process.stdout.write(`\x1b[48;2;40;40;60m${' '.repeat(cols)}\x1b[49m\n`);
 ```typescript
 // Unicode box drawing for framed regions
 const top    = '\u250c' + '\u2500'.repeat(40) + '\u2510';
-const middle = '\u2502' + ' pair-vibe session active '.padEnd(40) + '\u2502';
+const middle = '\u2502' + ' claude-duet session active '.padEnd(40) + '\u2502';
 const bottom = '\u2514' + '\u2500'.repeat(40) + '\u2518';
 console.log(top);
 console.log(middle);
@@ -497,7 +497,7 @@ function setBadge(text: string): void {
   const encoded = Buffer.from(text).toString('base64');
   process.stdout.write(`\x1b]1337;SetBadgeFormat=${encoded}\x07`);
 }
-setBadge('pair-vibe');
+setBadge('claude-duet');
 
 // Clear badge
 setBadge('');
@@ -549,7 +549,7 @@ process.stdout.write('\x1b]1337;SetColors=fg=e0e0e0\x07');  // light foreground
 **Profile switching:**
 ```typescript
 // Switch to a named profile (must exist in iTerm2 settings)
-process.stdout.write('\x1b]1337;SetProfile=PairVibe\x07');
+process.stdout.write('\x1b]1337;SetProfile=ClaudeDuet\x07');
 ```
 
 **Steal focus / request attention:**
@@ -586,7 +586,7 @@ process.stdout.write('\x1b]1337;SetKeyLabel=F1=Pair Mode\x07');
 **User variables (for shell integration):**
 ```typescript
 const value = Buffer.from('active').toString('base64');
-process.stdout.write(`\x1b]1337;SetUserVar=pairvibe_status=${value}\x07`);
+process.stdout.write(`\x1b]1337;SetUserVar=claudeduet_status=${value}\x07`);
 ```
 
 **Hyperlinks (OSC 8, cross-terminal):**
@@ -622,7 +622,7 @@ function kittyNotify(title: string, body?: string, id?: string): void {
     process.stdout.write(`\x1b]99;;${title}\x1b\\`);
   }
 }
-kittyNotify('Pair Vibe', 'Alice just joined the session');
+kittyNotify('Claude Duet', 'Alice just joined the session');
 ```
 
 **Image display (Kitty graphics protocol):**
@@ -687,8 +687,8 @@ function setWezTermUserVar(key: string, value: string): void {
   const encoded = Buffer.from(value).toString('base64');
   process.stdout.write(`\x1b]1337;SetUserVar=${key}=${encoded}\x07`);
 }
-setWezTermUserVar('pairvibe_status', 'active');
-setWezTermUserVar('pairvibe_partner', 'alice');
+setWezTermUserVar('claudeduet_status', 'active');
+setWezTermUserVar('claudeduet_partner', 'alice');
 ```
 
 Users can then reference these in their WezTerm Lua config to customize tab titles/appearance.
@@ -768,14 +768,14 @@ A CLI tool generally should NOT modify PS1 directly while running. Instead, ther
 **Environment variable approach (for post-session prompt modification):**
 ```typescript
 // Set an env var that the user's prompt can check
-process.env.PAIRVIBE_ACTIVE = '1';
-process.env.PAIRVIBE_PARTNER = 'alice';
+process.env.CLAUDEDUET_ACTIVE = '1';
+process.env.CLAUDEDUET_PARTNER = 'alice';
 ```
 
 Users can then add to their .zshrc:
 ```bash
-if [ -n "$PAIRVIBE_ACTIVE" ]; then
-  PS1="[pair-vibe: $PAIRVIBE_PARTNER] $PS1"
+if [ -n "$CLAUDEDUET_ACTIVE" ]; then
+  PS1="[claude-duet: $CLAUDEDUET_PARTNER] $PS1"
 fi
 ```
 
@@ -784,23 +784,23 @@ fi
 Starship works by replacing PS1 with its own rendered prompt before each command. It reads from `~/.config/starship.toml` for configuration. Custom modules can check for environment variables:
 
 ```toml
-[custom.pairvibe]
-command = 'echo "👥 $PAIRVIBE_PARTNER"'
-when = 'test -n "$PAIRVIBE_ACTIVE"'
+[custom.claudeduet]
+command = 'echo "👥 $CLAUDEDUET_PARTNER"'
+when = 'test -n "$CLAUDEDUET_ACTIVE"'
 format = "[$output]($style) "
 style = "bold yellow"
 ```
 
 **Oh My Zsh custom plugin approach:**
 
-Create a file at `~/.oh-my-zsh/custom/plugins/pairvibe/pairvibe.plugin.zsh`:
+Create a file at `~/.oh-my-zsh/custom/plugins/claudeduet/claudeduet.plugin.zsh`:
 ```bash
-pairvibe_prompt_info() {
-  if [ -n "$PAIRVIBE_ACTIVE" ]; then
-    echo "%{$fg[yellow]%}⚡ pair-vibe%{$reset_color%} "
+claudeduet_prompt_info() {
+  if [ -n "$CLAUDEDUET_ACTIVE" ]; then
+    echo "%{$fg[yellow]%}⚡ claude-duet%{$reset_color%} "
   fi
 }
-PROMPT='$(pairvibe_prompt_info)'"$PROMPT"
+PROMPT='$(claudeduet_prompt_info)'"$PROMPT"
 ```
 
 ### iTerm2/WezTerm User Variables
@@ -855,7 +855,7 @@ import player from 'play-sound';
 player().play('notification.mp3');
 ```
 
-**Recommended approach for pair-vibing:**
+**Recommended approach for duet-coding:**
 ```typescript
 function notifySound(event: 'join' | 'message' | 'leave'): void {
   // BEL as fallback
@@ -883,7 +883,7 @@ function notifySound(event: 'join' | 'message' | 'leave'): void {
 import notifier from 'node-notifier';
 
 notifier.notify({
-  title: 'Pair Vibe',
+  title: 'Claude Duet',
   message: 'Alice joined the session',
   icon: path.join(__dirname, 'icon.png'),
   sound: true,
@@ -914,7 +914,7 @@ process.stdout.write(`\x1b]9;Alice joined the session\x07`);
 
 **OSC 777 (rxvt-style, supported by WezTerm, Ghostty):**
 ```typescript
-process.stdout.write(`\x1b]777;notify;Pair Vibe;Alice joined\x07`);
+process.stdout.write(`\x1b]777;notify;Claude Duet;Alice joined\x07`);
 ```
 
 **OSC 99 (Kitty protocol, richest features):**
@@ -1002,7 +1002,7 @@ const StatusBar: React.FC<{
         paddingX={1}
       >
         <Text color="yellow" bold>
-          ✦ pair-vibe
+          ✦ claude-duet
         </Text>
         <Text> </Text>
         <Text color={status === 'connected' ? 'green' : 'red'}>
@@ -1058,7 +1058,7 @@ class StatusBar {
 
 // Usage:
 const bar = new StatusBar();
-bar.update(' \u2726 pair-vibe \u25cf alice + bob  |  connected  |  1234 tokens');
+bar.update(' \u2726 claude-duet \u25cf alice + bob  |  connected  |  1234 tokens');
 
 // Update on resize
 process.stdout.on('resize', () => {
@@ -1278,7 +1278,7 @@ process.stdout.write('\x1b[?25l');  // hide
 state.register('cursor visibility', () => process.stdout.write('\x1b[?25h'));
 
 // Terminal title
-process.stdout.write('\x1b]0;pair-vibe session\x07');
+process.stdout.write('\x1b]0;claude-duet session\x07');
 state.register('title', () => process.stdout.write('\x1b]0;\x07'));
 
 // Tab color (iTerm2)
@@ -1334,10 +1334,10 @@ restoreCursor(); // registers cleanup handlers automatically
 
 ## Quick Reference: Recommended "Active Session" Indicator Set
 
-For a pair-vibing tool, here is a recommended layered approach using the techniques above:
+For a duet-coding tool, here is a recommended layered approach using the techniques above:
 
 ### Universal (all terminals)
-1. **Window title**: `\x1b]0;pair-vibe \u25cf alice + bob\x07`
+1. **Window title**: `\x1b]0;claude-duet \u25cf alice + bob\x07`
 2. **Colored star indicator**: `\x1b[38;5;174m\u2726\x1b[39m` in status output
 3. **Terminal bell** on partner join: `\x07`
 4. **Spinner** while waiting: braille dot animation
@@ -1346,7 +1346,7 @@ For a pair-vibing tool, here is a recommended layered approach using the techniq
 
 ### iTerm2 Enhancements
 7. **Tab color** set to session theme color
-8. **Badge** showing "pair-vibe" as watermark
+8. **Badge** showing "claude-duet" as watermark
 9. **Progress bar** during long operations
 10. **Desktop notification** on partner activity
 11. **Cursor guide line** enabled

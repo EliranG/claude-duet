@@ -1,8 +1,8 @@
-# Pair-Vibe Implementation Plan
+# Claude-Duet Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build `pair-vibe`, an npm CLI tool that lets two users share a Claude Code session in real-time with E2E encryption and approval mode.
+**Goal:** Build `claude-duet`, an npm CLI tool that lets two users share a Claude Code session in real-time with E2E encryption and approval mode.
 
 **Architecture:** Host runs Claude Agent SDK + WebSocket server. Joiner connects via WebSocket — directly on LAN (default), or through an optional tunnel/relay for remote. All messages are E2E encrypted. Host can approve/reject joiner's prompts.
 
@@ -38,13 +38,13 @@ mkdir -p src
 Create `package.json`:
 ```json
 {
-  "name": "pair-vibe",
+  "name": "claude-duet",
   "version": "0.1.0",
-  "description": "Pair vibe coding — share a Claude Code session with a partner",
+  "description": "Claude Duet — share a Claude Code session with a partner",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "pair-vibe": "dist/index.js"
+    "claude-duet": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -99,7 +99,7 @@ dist/
 Create `src/index.ts`:
 ```typescript
 #!/usr/bin/env node
-console.log("pair-vibe");
+console.log("claude-duet");
 ```
 
 **Step 6: Verify it builds**
@@ -108,13 +108,13 @@ console.log("pair-vibe");
 npx tsc
 node dist/index.js
 ```
-Expected: prints "pair-vibe"
+Expected: prints "claude-duet"
 
 **Step 7: Commit**
 
 ```bash
 git add package.json tsconfig.json src/index.ts .gitignore
-git commit -m "chore: scaffold pair-vibe project"
+git commit -m "chore: scaffold claude-duet project"
 ```
 
 ---
@@ -787,23 +787,23 @@ Create `src/__tests__/server.test.ts`:
 ```typescript
 import { describe, it, expect, afterEach } from "vitest";
 import WebSocket from "ws";
-import { PairVibeServer } from "../server.js";
+import { ClaudeDuetServer } from "../server.js";
 
-describe("PairVibeServer", () => {
-  let server: PairVibeServer;
+describe("ClaudeDuetServer", () => {
+  let server: ClaudeDuetServer;
 
   afterEach(async () => {
     if (server) await server.stop();
   });
 
   it("starts on a random port and returns the port", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
     expect(port).toBeGreaterThan(0);
   });
 
   it("accepts a WebSocket connection", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
     const ws = new WebSocket(`ws://localhost:${port}`);
@@ -814,7 +814,7 @@ describe("PairVibeServer", () => {
   });
 
   it("rejects connections with wrong password", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
     const ws = new WebSocket(`ws://localhost:${port}`);
@@ -837,7 +837,7 @@ describe("PairVibeServer", () => {
   });
 
   it("accepts connections with correct password", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
     const ws = new WebSocket(`ws://localhost:${port}`);
@@ -883,7 +883,7 @@ export interface ServerOptions {
   approvalMode?: boolean;
 }
 
-export class PairVibeServer extends EventEmitter {
+export class ClaudeDuetServer extends EventEmitter {
   private wss?: WebSocketServer;
   private guest?: WebSocket;
   private guestUser?: string;
@@ -1036,12 +1036,12 @@ git commit -m "feat: add WebSocket server with auth and single-guest model"
 Create `src/__tests__/client.test.ts`:
 ```typescript
 import { describe, it, expect, afterEach } from "vitest";
-import { PairVibeServer } from "../server.js";
-import { PairVibeClient } from "../client.js";
+import { ClaudeDuetServer } from "../server.js";
+import { ClaudeDuetClient } from "../client.js";
 
-describe("PairVibeClient", () => {
-  let server: PairVibeServer;
-  let client: PairVibeClient;
+describe("ClaudeDuetClient", () => {
+  let server: ClaudeDuetServer;
+  let client: ClaudeDuetClient;
 
   afterEach(async () => {
     if (client) await client.disconnect();
@@ -1049,30 +1049,30 @@ describe("PairVibeClient", () => {
   });
 
   it("connects and joins with correct password", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     const result = await client.connect(`ws://localhost:${port}`, "bob", "test1234");
     expect(result.type).toBe("join_accepted");
     expect(result.hostUser).toBe("alice");
   });
 
   it("fails to join with wrong password", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await expect(
       client.connect(`ws://localhost:${port}`, "bob", "wrongpass")
     ).rejects.toThrow("Invalid password");
   });
 
   it("receives broadcast messages", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const messages: any[] = [];
@@ -1091,10 +1091,10 @@ describe("PairVibeClient", () => {
   });
 
   it("sends prompts to server", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const prompts: any[] = [];
@@ -1126,7 +1126,7 @@ import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
 import type { ClientMessage, ServerMessage, JoinAccepted } from "./protocol.js";
 
-export class PairVibeClient extends EventEmitter {
+export class ClaudeDuetClient extends EventEmitter {
   private ws?: WebSocket;
   private user?: string;
 
@@ -1247,7 +1247,7 @@ Create `src/__tests__/router.test.ts`:
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
-import { PairVibeServer } from "../server.js";
+import { ClaudeDuetServer } from "../server.js";
 import type { PromptMessage } from "../protocol.js";
 
 // Mock Claude bridge
@@ -1376,7 +1376,7 @@ Expected: FAIL
 Create `src/router.ts`:
 ```typescript
 import type { ClaudeBridge } from "./claude.js";
-import type { PairVibeServer } from "./server.js";
+import type { ClaudeDuetServer } from "./server.js";
 import type { PromptMessage, ServerMessage } from "./protocol.js";
 
 interface RouterOptions {
@@ -1392,10 +1392,10 @@ interface PendingPrompt {
 export class PromptRouter {
   private pending = new Map<string, PendingPrompt>();
   private claude: ClaudeBridge;
-  private server: PairVibeServer;
+  private server: ClaudeDuetServer;
   private options: RouterOptions;
 
-  constructor(claude: ClaudeBridge, server: PairVibeServer, options: RouterOptions) {
+  constructor(claude: ClaudeBridge, server: ClaudeDuetServer, options: RouterOptions) {
     this.claude = claude;
     this.server = server;
     this.options = options;
@@ -1477,7 +1477,7 @@ git commit -m "feat: add prompt router with approval mode"
 **Design:** Zero third-party relay dependencies. Connection tiers:
 1. **Direct LAN** (default) — auto-detect local IP, display for sharing
 2. **Cloudflare Quick Tunnel** (opt-in) — user's own `cloudflared` binary, no account needed
-3. **Self-hosted relay** (opt-in) — `pair-vibe relay` command, ~50 LOC WebSocket proxy included in package
+3. **Self-hosted relay** (opt-in) — `claude-duet relay` command, ~50 LOC WebSocket proxy included in package
 4. **Custom URL** — `--url ws://anything` for SSH tunnels, Tailscale, VPN, etc.
 
 **Step 1: Write the tests**
@@ -1620,7 +1620,7 @@ export function startRelayServer(port: number): void {
   const rooms = new Map<string, Room>();
   const wss = new WebSocketServer({ port });
 
-  console.log(`pair-vibe relay listening on ws://0.0.0.0:${port}`);
+  console.log(`claude-duet relay listening on ws://0.0.0.0:${port}`);
 
   wss.on("connection", (ws, req) => {
     const url = new URL(req.url || "/", `http://localhost:${port}`);
@@ -1693,7 +1693,7 @@ git commit -m "feat: add connection layer with LAN auto-detect, Cloudflare tunne
 **Files:**
 - Create: `src/wizard.ts`
 
-The interactive setup flow that runs when user types `pair-vibe` with no args.
+The interactive setup flow that runs when user types `claude-duet` with no args.
 Uses @clack/prompts for beautiful Claude Code-inspired interactive prompts.
 
 **Step 1: Implement the wizard**
@@ -1720,7 +1720,7 @@ export interface WizardResult {
 }
 
 export async function runWizard(): Promise<WizardResult | null> {
-  p.intro(`${pc.bgCyan(pc.black(" pair-vibe "))} ${pc.dim("v0.1.0")}`);
+  p.intro(`${pc.bgCyan(pc.black(" claude-duet "))} ${pc.dim("v0.1.0")}`);
 
   const mode = await p.select({
     message: "What would you like to do?",
@@ -1859,7 +1859,7 @@ export function StatusBar({ hostUser, guestUser, sessionCode, connectionMode, co
   return (
     <Box justifyContent="space-between" borderStyle="single" borderColor="gray" paddingX={1}>
       <Box gap={1}>
-        <Text color="cyan" bold>pair-vibe</Text>
+        <Text color="cyan" bold>claude-duet</Text>
         <Text dimColor>──</Text>
         <Text color="blue">{hostUser} (host)</Text>
         <Text color="green">●</Text>
@@ -1962,7 +1962,7 @@ export function App({ role, userName, sessionCode, connectionMode, onInput, onCo
   const [contextPercent, setContextPercent] = useState(0);
 
   // Expose state setters for external wiring
-  (globalThis as any).__pairVibe = {
+  (globalThis as any).__claudeDuet = {
     addMessage: (msg: ChatMessage) => setMessages(prev => [...prev, msg]),
     setGuestUser,
     setCost,
@@ -2017,7 +2017,7 @@ git commit -m "feat: add Ink-based session TUI with status bar, chat view, and c
 
 Create `src/commands/host.ts`:
 ```typescript
-import { PairVibeServer } from "../server.js";
+import { ClaudeDuetServer } from "../server.js";
 import { ClaudeBridge } from "../claude.js";
 import { PromptRouter } from "../router.js";
 import { TerminalUI } from "../ui.js";
@@ -2039,7 +2039,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
 
   const ui = new TerminalUI({ userName: options.name, role: "host" });
   const claude = new ClaudeBridge();
-  const server = new PairVibeServer({
+  const server = new ClaudeDuetServer({
     hostUser: options.name,
     password: session.password,
     approvalMode,
@@ -2164,7 +2164,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
 
 Create `src/commands/join.ts`:
 ```typescript
-import { PairVibeClient } from "../client.js";
+import { ClaudeDuetClient } from "../client.js";
 import { TerminalUI } from "../ui.js";
 
 interface JoinOptions {
@@ -2180,11 +2180,11 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
   ui.showSystem(`Connecting to ${serverUrl}...`);
 
-  const client = new PairVibeClient();
+  const client = new ClaudeDuetClient();
 
   try {
     const result = await client.connect(serverUrl, options.name, options.password);
-    ui.showSystem(`Connected! You're pair vibing with ${result.hostUser}.`);
+    ui.showSystem(`Connected! You're duet coding with ${result.hostUser}.`);
     if (result.approvalMode) {
       ui.showSystem("Approval mode is ON — host will review your prompts.");
     }
@@ -2242,7 +2242,7 @@ async function resolveSessionUrl(sessionCode: string): Promise<string> {
   // In future: session code could encode the URL
   throw new Error(
     `Cannot resolve session "${sessionCode}" — use --url to specify the server URL directly.\n` +
-    `  Example: pair-vibe join ${sessionCode} --url ws://localhost:3000`
+    `  Example: claude-duet join ${sessionCode} --url ws://localhost:3000`
   );
 }
 ```
@@ -2261,13 +2261,13 @@ import { startRelayServer } from "./relay-server.js";
 const program = new Command();
 
 program
-  .name("pair-vibe")
-  .description("Pair vibe coding — share a Claude Code session with a partner")
+  .name("claude-duet")
+  .description("Claude Duet — share a Claude Code session with a partner")
   .version("0.1.0");
 
 program
   .command("host")
-  .description("Start a pair-vibe session as host")
+  .description("Start a claude-duet session as host")
   .option("-n, --name <name>", "your display name", process.env.USER || "host")
   .option("--no-approval", "disable approval mode (trust your partner)")
   .option("--tunnel <provider>", "use a tunnel for remote access (cloudflare)")
@@ -2285,7 +2285,7 @@ program
 
 program
   .command("join <session-code>")
-  .description("Join an existing pair-vibe session")
+  .description("Join an existing claude-duet session")
   .option("-n, --name <name>", "your display name", process.env.USER || "guest")
   .option("--password <password>", "session password")
   .option("--url <url>", "WebSocket URL (direct, SSH tunnel, VPN, etc.)")
@@ -2305,7 +2305,7 @@ program
 
 program
   .command("relay")
-  .description("Run a self-hosted relay server for remote pair-vibe sessions")
+  .description("Run a self-hosted relay server for remote claude-duet sessions")
   .option("-p, --port <port>", "relay server port", "9877")
   .action((options) => {
     startRelayServer(parseInt(options.port, 10));
@@ -2345,8 +2345,8 @@ git commit -m "feat: add CLI commands for host and join"
 Create `src/__tests__/integration.test.ts`:
 ```typescript
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { PairVibeServer } from "../server.js";
-import { PairVibeClient } from "../client.js";
+import { ClaudeDuetServer } from "../server.js";
+import { ClaudeDuetClient } from "../client.js";
 import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
 
@@ -2356,8 +2356,8 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 }));
 
 describe("integration: host + guest full flow", () => {
-  let server: PairVibeServer;
-  let client: PairVibeClient;
+  let server: ClaudeDuetServer;
+  let client: ClaudeDuetClient;
 
   afterEach(async () => {
     if (client) await client.disconnect();
@@ -2366,7 +2366,7 @@ describe("integration: host + guest full flow", () => {
 
   it("guest connects, sends prompt, host approves, Claude responds", async () => {
     // Setup host
-    server = new PairVibeServer({
+    server = new ClaudeDuetServer({
       hostUser: "alice",
       password: "test1234",
       approvalMode: true,
@@ -2391,7 +2391,7 @@ describe("integration: host + guest full flow", () => {
     });
 
     // Guest connects
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     // Guest sends prompt
@@ -2412,13 +2412,13 @@ describe("integration: host + guest full flow", () => {
   });
 
   it("guest receives streamed responses", async () => {
-    server = new PairVibeServer({
+    server = new ClaudeDuetServer({
       hostUser: "alice",
       password: "test1234",
     });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const messages: any[] = [];
@@ -2477,7 +2477,7 @@ Add to `package.json`:
   "files": ["dist", "README.md", "LICENSE"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/elirang/pair-vibe"
+    "url": "https://github.com/elirang/claude-duet"
   }
 }
 ```
@@ -2494,9 +2494,9 @@ Expected: Prints help with host and join commands
 
 ```bash
 npm link
-pair-vibe --help
-pair-vibe host --help
-pair-vibe join --help
+claude-duet --help
+claude-duet host --help
+claude-duet join --help
 ```
 Expected: All help commands work
 
@@ -2683,7 +2683,7 @@ export class SessionLifecycle {
 
   private saveLog(summary: SessionSummary): void {
     try {
-      const dir = join(process.cwd(), ".pair-vibe", "sessions");
+      const dir = join(process.cwd(), ".claude-duet", "sessions");
       mkdirSync(dir, { recursive: true });
       const content = [
         `Session: ${summary.sessionCode}`,
@@ -2728,7 +2728,7 @@ git commit -m "feat: add session lifecycle manager with stats, summary, and logg
 - Create: `CONTRIBUTING.md`
 - Create: `.github/workflows/ci.yml`
 - Modify: `package.json` (add repository, keywords, etc.)
-- Create: `.pair-vibe` entry in `.gitignore`
+- Create: `.claude-duet` entry in `.gitignore`
 
 **Step 1: Create LICENSE (MIT)**
 
@@ -2787,7 +2787,7 @@ jobs:
 
 Add:
 ```
-.pair-vibe/
+.claude-duet/
 ```
 
 **Step 6: Update package.json**
@@ -2834,12 +2834,12 @@ Same as previous Task 12, renumbered.
 
 **Usage modes:**
 ```
-pair-vibe                                   # Interactive wizard
-pair-vibe host                              # LAN direct (default, skip wizard)
-pair-vibe host --tunnel cloudflare          # Cloudflare Quick Tunnel
-pair-vibe host --relay wss://relay.co       # Self-hosted relay
-pair-vibe relay                             # Run the relay server (~50 LOC)
-pair-vibe join <code> --url ws://...        # Any URL (SSH tunnel, VPN, etc.)
+claude-duet                                   # Interactive wizard
+claude-duet host                              # LAN direct (default, skip wizard)
+claude-duet host --tunnel cloudflare          # Cloudflare Quick Tunnel
+claude-duet host --relay wss://relay.co       # Self-hosted relay
+claude-duet relay                             # Run the relay server (~50 LOC)
+claude-duet join <code> --url ws://...        # Any URL (SSH tunnel, VPN, etc.)
 ```
 
 **Session commands:**

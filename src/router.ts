@@ -1,5 +1,5 @@
 import type { ClaudeBridge } from "./claude.js";
-import type { PairVibeServer } from "./server.js";
+import type { ClaudeDuetServer } from "./server.js";
 import type { PromptMessage, ServerMessage } from "./protocol.js";
 
 interface RouterOptions {
@@ -15,10 +15,10 @@ interface PendingPrompt {
 export class PromptRouter {
   private pending = new Map<string, PendingPrompt>();
   private claude: ClaudeBridge;
-  private server: PairVibeServer;
+  private server: ClaudeDuetServer;
   private options: RouterOptions;
 
-  constructor(claude: ClaudeBridge, server: PairVibeServer, options: RouterOptions) {
+  constructor(claude: ClaudeBridge, server: ClaudeDuetServer, options: RouterOptions) {
     this.claude = claude;
     this.server = server;
     this.options = options;

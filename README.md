@@ -1,10 +1,10 @@
 <div align="center">
 
-# pair-vibe
+# claude-duet
 
-**Two developers, one Claude. Pair vibe coding in real-time.**
+**Two developers, one Claude. Duet coding in real-time.**
 
-[![npm version](https://img.shields.io/npm/v/pair-vibe)](https://www.npmjs.com/package/pair-vibe)
+[![npm version](https://img.shields.io/npm/v/claude-duet)](https://www.npmjs.com/package/claude-duet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Share your AI coding session with a partner. Host runs the AI,
@@ -21,7 +21,7 @@ partner sends prompts — both see everything in real-time.
 
 ```bash
 # Host a session (installs automatically via npx)
-npx pair-vibe host
+npx claude-duet host
 
 # Share the join command shown in your terminal with your partner
 # They run it — that's it!
@@ -30,7 +30,7 @@ npx pair-vibe host
 The host terminal will display a ready-to-share command like:
 
 ```
-npx pair-vibe join pv-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
+npx claude-duet join pv-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
 ```
 
 Send it via Slack, Discord, or any chat. Your partner runs it and you're paired up.
@@ -55,10 +55,10 @@ Send it via Slack, Discord, or any chat. Your partner runs it and you're paired 
 
 | Mode | Command | Use Case |
 |------|---------|----------|
-| **LAN Direct** | `npx pair-vibe host` | Same network, zero config |
+| **LAN Direct** | `npx claude-duet host` | Same network, zero config |
 | **SSH Tunnel** | `ssh -L 3000:localhost:3000 host` | Remote, proven security |
-| **Cloudflare Tunnel** | `npx pair-vibe host --tunnel cloudflare` | Remote, no server needed |
-| **Self-hosted Relay** | `npx pair-vibe host --relay wss://relay.example.com` | Custom infrastructure |
+| **Cloudflare Tunnel** | `npx claude-duet host --tunnel cloudflare` | Remote, no server needed |
+| **Self-hosted Relay** | `npx claude-duet host --relay wss://relay.example.com` | Custom infrastructure |
 
 ## Security
 
@@ -70,12 +70,12 @@ Send it via Slack, Discord, or any chat. Your partner runs it and you're paired 
 ## Commands
 
 ```
-npx pair-vibe                          # Interactive wizard
-npx pair-vibe host                     # Host on LAN (default)
-npx pair-vibe host --no-approval       # Host without approval mode
-npx pair-vibe host --tunnel cloudflare # Host via Cloudflare tunnel
-npx pair-vibe relay                    # Run a relay server
-npx pair-vibe join <code> --password <pw> --url <url>  # Join a session
+npx claude-duet                          # Interactive wizard
+npx claude-duet host                     # Host on LAN (default)
+npx claude-duet host --no-approval       # Host without approval mode
+npx claude-duet host --tunnel cloudflare # Host via Cloudflare tunnel
+npx claude-duet relay                    # Run a relay server
+npx claude-duet join <code> --password <pw> --url <url>  # Join a session
 ```
 
 ## Session Commands
@@ -94,8 +94,8 @@ npx pair-vibe join <code> --password <pw> --url <url>  # Join a session
 ## Development
 
 ```bash
-git clone https://github.com/elirang/pair-vibe.git
-cd pair-vibe
+git clone https://github.com/elirang/claude-duet.git
+cd claude-duet
 npm install
 npm run build
 npm test

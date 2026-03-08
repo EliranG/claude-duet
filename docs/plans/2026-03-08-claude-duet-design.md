@@ -1,4 +1,4 @@
-# Pair-Vibe Design Document
+# Claude-Duet Design Document
 
 ## Problem
 
@@ -6,16 +6,16 @@ Two developers want to pair program with AI (Claude Code) together in real-time.
 
 ## Solution
 
-**pair-vibe** — an open-source npm CLI tool that lets two users share a Claude Code session. One command to host, one to join. Claude Code-inspired interactive UX.
+**claude-duet** — an open-source npm CLI tool that lets two users share a Claude Code session. One command to host, one to join. Claude Code-inspired interactive UX.
 
 ## User Experience Flow
 
 ### Host Flow (Alice)
 
 ```
-$ pair-vibe
+$ claude-duet
 
-  ┌  pair-vibe v0.1.0
+  ┌  claude-duet v0.1.0
   │
   ◆  What would you like to do?
   │  ● Host a session (you run Claude Code)
@@ -52,9 +52,9 @@ $ pair-vibe
 ### Join Flow (Bob)
 
 ```
-$ pair-vibe
+$ claude-duet
 
-  ┌  pair-vibe v0.1.0
+  ┌  claude-duet v0.1.0
   │
   ◆  What would you like to do?
   │  ○ Host a session
@@ -73,7 +73,7 @@ $ pair-vibe
   ◆  Connection URL?
   │  ws://192.168.1.42:9876
   │
-  ◇  Connected! You're pair vibing with alice.
+  ◇  Connected! You're duet coding with alice.
   │  Approval mode is ON — alice will review your prompts.
   │
   └  Session started.
@@ -83,16 +83,16 @@ $ pair-vibe
 
 ```bash
 # Host — skip wizard
-pair-vibe host --name alice --no-approval --tunnel cloudflare
+claude-duet host --name alice --no-approval --tunnel cloudflare
 
 # Join — skip wizard
-pair-vibe join pv-7f3a9c2e --name bob --password a1b2c3d4 --url ws://192.168.1.42:9876
+claude-duet join pv-7f3a9c2e --name bob --password a1b2c3d4 --url ws://192.168.1.42:9876
 ```
 
 ### Active Session UI
 
 ```
-  pair-vibe ── alice (host) ● bob (guest) ── pv-7f3a9c2e ── LAN
+  claude-duet ── alice (host) ● bob (guest) ── pv-7f3a9c2e ── LAN
   ─────────────────────────────────────────────────────────────────
 
   [alice (host)]: Fix the login bug in auth.ts
@@ -117,7 +117,7 @@ pair-vibe join pv-7f3a9c2e --name bob --password a1b2c3d4 --url ws://192.168.1.4
 
 **Session Start:**
 ```
-  ◇  Connected! You're pair vibing with alice.
+  ◇  Connected! You're duet coding with alice.
   │  Approval mode is ON — alice will review your prompts.
   │
   └  ✦ Session started at 14:32:05
@@ -134,9 +134,9 @@ pair-vibe join pv-7f3a9c2e --name bob --password a1b2c3d4 --url ws://192.168.1.4
   │  Total cost:  $0.4821
   │  Prompts:     alice: 14, bob: 9
   │
-  │  Session log saved to .pair-vibe/sessions/pv-7f3a9c2e.log
+  │  Session log saved to .claude-duet/sessions/pv-7f3a9c2e.log
   │
-  └  ✦ Session ended. Thanks for pair vibing!
+  └  ✦ Session ended. Thanks for duet coding!
 ```
 
 **Session End — Partner disconnected:**
@@ -164,7 +164,7 @@ pair-vibe join pv-7f3a9c2e --name bob --password a1b2c3d4 --url ws://192.168.1.4
 ```
 User A's machine (host)
 ┌─────────────────────────────────────┐
-│  pair-vibe host                     │
+│  claude-duet host                     │
 │  ├── Claude Agent SDK instance      │  ← drives Claude Code
 │  ├── Prompt Router                  │  ← attributes prompts by user
 │  ├── WebSocket Server (:random)     │  ← real-time comms
@@ -183,7 +183,7 @@ User A's machine (host)
             ▼
 ┌─────────────────────────────────────┐
 │  User B's machine (joiner)          │
-│  └── pair-vibe join                 │
+│  └── claude-duet join                 │
 │      ├── WebSocket Client           │
 │      ├── E2E Encryption (NaCl)     │
 │      └── TUI (Ink + React)         │
@@ -199,7 +199,7 @@ User A's machine (host)
 ## Key Design Decisions
 
 ### 1. Interactive wizard by default, flags for power users
-- Running `pair-vibe` with no args launches an interactive setup wizard (@clack/prompts)
+- Running `claude-duet` with no args launches an interactive setup wizard (@clack/prompts)
 - Every wizard step has a CLI flag equivalent for non-interactive use
 - Follows the `create-next-app` / `create astro` UX pattern
 
@@ -237,17 +237,17 @@ User A's machine (host)
 - Session logs saved locally for audit
 
 ### 8. Signature visual identity — violet `✦`
-Claude Code owns the orange `✦`. Pair-vibe uses the same symbol in **violet/purple** (blue + red = two people).
+Claude Code owns the orange `✦`. Claude-Duet uses the same symbol in **violet/purple** (blue + red = two people).
 
 **Layered indicator system** (each terminal gets the best it supports):
 
 | Layer | What | Support |
 |-------|------|---------|
 | 1 (universal) | Violet `✦` in status bar + prompt | All terminals |
-| 1 (universal) | Terminal title: `pair-vibe ✦ alice + bob` | All terminals |
+| 1 (universal) | Terminal title: `claude-duet ✦ alice + bob` | All terminals |
 | 1 (universal) | Cursor shape → underline while in session | All modern terminals |
 | 2 (enhanced) | Cursor color → violet (#9B59B6) | Kitty, WezTerm, Ghostty |
-| 2 (enhanced) | iTerm2 badge: translucent `PAIR VIBING` watermark | iTerm2 only |
+| 2 (enhanced) | iTerm2 badge: translucent `DUET CODING` watermark | iTerm2 only |
 | 2 (enhanced) | iTerm2 tab color → violet | iTerm2 only |
 | 2 (enhanced) | Desktop notification on partner join/disconnect | All (node-notifier) |
 | 3 (personality) | Subtle chime on partner join | macOS (afplay) |
@@ -338,8 +338,8 @@ All messages are JSON, encrypted before transmission:
 ## Open Source
 
 - **License:** MIT
-- **Repository:** github.com/elirang/pair-vibe
-- **Package:** `npm install -g pair-vibe` (or `npx pair-vibe`)
+- **Repository:** github.com/elirang/claude-duet
+- **Package:** `npm install -g claude-duet` (or `npx claude-duet`)
 - **Files:** README.md, CONTRIBUTING.md, LICENSE, CHANGELOG.md, .github/workflows/ci.yml
 
 ## Scope

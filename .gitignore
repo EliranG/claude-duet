@@ -1,4 +1,4 @@
 node_modules/
 dist/
 *.tsbuildinfo
-.pair-vibe/
+.claude-duet/

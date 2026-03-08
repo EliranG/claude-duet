@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { PairVibeServer } from "../server.js";
-import { PairVibeClient } from "../client.js";
+import { ClaudeDuetServer } from "../server.js";
+import { ClaudeDuetClient } from "../client.js";
 import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
 import { TerminalUI } from "../ui.js";
@@ -11,8 +11,8 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 }));
 
 describe("integration: host + guest full flow", () => {
-  let server: PairVibeServer;
-  let client: PairVibeClient;
+  let server: ClaudeDuetServer;
+  let client: ClaudeDuetClient;
   let ui: TerminalUI | undefined;
 
   afterEach(async () => {
@@ -30,7 +30,7 @@ describe("integration: host + guest full flow", () => {
 
   it("guest connects, sends prompt, host approves, Claude responds", async () => {
     // Setup host
-    server = new PairVibeServer({
+    server = new ClaudeDuetServer({
       hostUser: "alice",
       password: "test1234",
       approvalMode: true,
@@ -55,7 +55,7 @@ describe("integration: host + guest full flow", () => {
     });
 
     // Guest connects
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     // Guest sends prompt
@@ -102,7 +102,7 @@ describe("integration: host + guest full flow", () => {
   });
 
   it("host prompt is broadcast to guest exactly once", async () => {
-    server = new PairVibeServer({
+    server = new ClaudeDuetServer({
       hostUser: "alice",
       password: "test1234",
     });
@@ -116,7 +116,7 @@ describe("integration: host + guest full flow", () => {
       approvalMode: false,
     });
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const received: any[] = [];
@@ -142,13 +142,13 @@ describe("integration: host + guest full flow", () => {
   });
 
   it("guest receives streamed responses", async () => {
-    server = new PairVibeServer({
+    server = new ClaudeDuetServer({
       hostUser: "alice",
       password: "test1234",
     });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const messages: any[] = [];

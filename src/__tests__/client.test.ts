@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { PairVibeServer } from "../server.js";
-import { PairVibeClient } from "../client.js";
+import { ClaudeDuetServer } from "../server.js";
+import { ClaudeDuetClient } from "../client.js";
 
-describe("PairVibeClient", () => {
-  let server: PairVibeServer;
-  let client: PairVibeClient;
+describe("ClaudeDuetClient", () => {
+  let server: ClaudeDuetServer;
+  let client: ClaudeDuetClient;
 
   afterEach(async () => {
     if (client) await client.disconnect();
@@ -12,10 +12,10 @@ describe("PairVibeClient", () => {
   });
 
   it("connects and joins with correct password", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     const result = await client.connect(
       `ws://localhost:${port}`,
       "bob",
@@ -26,20 +26,20 @@ describe("PairVibeClient", () => {
   });
 
   it("fails to join with wrong password", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await expect(
       client.connect(`ws://localhost:${port}`, "bob", "wrongpass"),
     ).rejects.toThrow("Invalid password");
   });
 
   it("receives broadcast messages", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const messages: any[] = [];
@@ -58,10 +58,10 @@ describe("PairVibeClient", () => {
   });
 
   it("sends prompts to server", async () => {
-    server = new PairVibeServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
     const port = await server.start();
 
-    client = new PairVibeClient();
+    client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "bob", "test1234");
 
     const prompts: any[] = [];

@@ -20,7 +20,7 @@ export function App({ role, userName, sessionCode, connectionMode, onInput, onCo
   const [contextPercent, setContextPercent] = useState(0);
 
   // Expose state setters for external wiring
-  (globalThis as any).__pairVibe = {
+  (globalThis as any).__claudeDuet = {
     addMessage: (msg: ChatMessage) => setMessages(prev => [...prev, msg]),
     setGuestUser,
     setCost,

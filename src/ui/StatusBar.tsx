@@ -14,7 +14,7 @@ export function StatusBar({ hostUser, guestUser, sessionCode, connectionMode, co
   return (
     <Box justifyContent="space-between" borderStyle="single" borderColor="gray" paddingX={1}>
       <Box gap={1}>
-        <Text color="cyan" bold>pair-vibe</Text>
+        <Text color="cyan" bold>claude-duet</Text>
         <Text dimColor>──</Text>
         <Text color="blue">{hostUser} (host)</Text>
         <Text color="green">●</Text>

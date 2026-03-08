@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
-import { PairVibeServer } from "../server.js";
+import { ClaudeDuetServer } from "../server.js";
 import type { PromptMessage } from "../protocol.js";
 
 // Mock Claude bridge

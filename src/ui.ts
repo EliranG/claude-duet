@@ -45,7 +45,7 @@ export class TerminalUI {
     this.background = pickSessionBackground();
     process.stdout.write(applyBackground(this.background));
     console.log("");
-    console.log(pc.bold(pc.cyan("  \u2726 pair-vibe session started")));
+    console.log(pc.bold(pc.cyan("  \u2726 claude-duet session started")));
     console.log(`  Session code: ${pc.bold(sessionCode)}`);
     console.log(`  Password: ${pc.bold(password)}`);
     if (connectUrl) {
@@ -53,11 +53,11 @@ export class TerminalUI {
       console.log("");
       console.log(pc.bold("  Share this command with your partner:"));
       console.log("");
-      const joinCmd = `npx pair-vibe join ${sessionCode} --password ${password} --url ${connectUrl}`;
+      const joinCmd = `npx claude-duet join ${sessionCode} --password ${password} --url ${connectUrl}`;
       console.log(`  ${pc.green(pc.bold(joinCmd))}`);
       console.log("");
       console.log(pc.dim("  Slack-friendly message (copy & share):"));
-      console.log(pc.dim(`  Hey! Join my pair-vibe session: \`${joinCmd}\``));
+      console.log(pc.dim(`  Hey! Join my claude-duet session: \`${joinCmd}\``));
     } else {
       console.log(`  Share these with your partner to join.`);
     }
