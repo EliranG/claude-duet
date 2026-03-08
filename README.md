@@ -1,82 +1,95 @@
+<div align="center">
+
 # pair-vibe
 
-**Pair vibe coding -- share a Claude Code session with a partner.**
+**Two developers, one Claude. Pair vibe coding in real-time.**
 
-Two developers, one Claude. Host a session, share a code, and vibe together in real-time.
+[![npm version](https://img.shields.io/npm/v/pair-vibe)](https://www.npmjs.com/package/pair-vibe)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Share your AI coding session with a partner. Host runs the AI,
+partner sends prompts — both see everything in real-time.
+
+</div>
+
+---
+
+> **Currently supports [Claude Code](https://claude.ai/code) (Anthropic's CLI).**
+> Support for other AI coding tools (Codex CLI, Gemini CLI, etc.) is planned for future releases.
 
 ## Quick Start
 
 ```bash
-# Install globally
-npm install -g pair-vibe
+# Host a session (installs automatically via npx)
+npx pair-vibe host
 
-# Host a session (LAN default)
-pair-vibe host
-
-# On another machine, join with the code shown by host
-pair-vibe join <session-code> --url ws://<host-ip>:3000
+# Share the join command shown in your terminal with your partner
+# They run it — that's it!
 ```
 
-Or just run the interactive wizard:
+The host terminal will display a ready-to-share command like:
 
-```bash
-pair-vibe
 ```
+npx pair-vibe join pv-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
+```
+
+Send it via Slack, Discord, or any chat. Your partner runs it and you're paired up.
 
 ## How It Works
 
-The **host** runs Claude Code locally via the Agent SDK and starts a WebSocket server.
-The **joiner** connects over the network and sends prompts to the shared session.
-All communication is end-to-end encrypted -- the transport layer never sees plaintext.
+```
+┌──────────────┐     WebSocket      ┌──────────────┐
+│   Host       │◄──────────────────►│   Partner    │
+│   Claude Code│     encrypted      │   Terminal   │
+│   + Server   │                    │   Client     │
+└──────────────┘                    └──────────────┘
+```
 
-Both users see Claude's responses stream in real-time through an Ink-based terminal UI.
+1. **Host** runs Claude Code locally via the Agent SDK and starts a WebSocket server
+2. **Partner** connects and sends prompts to the shared session
+3. **Both** see Claude's responses stream in real-time
+4. All communication is **end-to-end encrypted** (NaCl secretbox)
+5. **Approval mode** (default): host reviews partner prompts before execution
 
 ## Connection Modes
 
 | Mode | Command | Use Case |
 |------|---------|----------|
-| **LAN Direct** | `pair-vibe host` | Same network, zero config |
-| **Cloudflare Tunnel** | `pair-vibe host --tunnel cloudflare` | Remote, no server needed |
-| **Self-hosted Relay** | `pair-vibe host --relay wss://relay.example.com` | Custom infrastructure |
-| **SSH Tunnel** | `ssh -L 3000:localhost:3000 host` + `pair-vibe join` | Proven security |
-
-### Running a Relay Server
-
-```bash
-pair-vibe relay              # Default port 8080
-pair-vibe relay --port 9000  # Custom port
-```
+| **LAN Direct** | `npx pair-vibe host` | Same network, zero config |
+| **SSH Tunnel** | `ssh -L 3000:localhost:3000 host` | Remote, proven security |
+| **Cloudflare Tunnel** | `npx pair-vibe host --tunnel cloudflare` | Remote, no server needed |
+| **Self-hosted Relay** | `npx pair-vibe host --relay wss://relay.example.com` | Custom infrastructure |
 
 ## Security
 
-- **E2E Encryption**: Every message encrypted with NaCl secretbox (XSalsa20-Poly1305)
-- **Key Derivation**: Session passphrase stretched via scrypt before use
-- **Approval Mode**: On by default -- host reviews and approves guest prompts before execution
-- **No Third-Party Relay**: LAN direct is the default; SSH is recommended for remote
+- **E2E Encryption** — NaCl secretbox (XSalsa20-Poly1305) with scrypt key derivation
+- **Approval Mode** — Host reviews partner prompts before execution (on by default)
+- **No Third-Party Relay** — LAN direct is default; SSH recommended for remote
+- **Host Controls** — All Claude Code operations run on the host machine only
 
-The session code encodes both the connection URL and an encryption key. The host machine
-runs all Claude Code operations -- the joiner never gets direct filesystem access.
+## Commands
+
+```
+npx pair-vibe                          # Interactive wizard
+npx pair-vibe host                     # Host on LAN (default)
+npx pair-vibe host --no-approval       # Host without approval mode
+npx pair-vibe host --tunnel cloudflare # Host via Cloudflare tunnel
+npx pair-vibe relay                    # Run a relay server
+npx pair-vibe join <code> --password <pw> --url <url>  # Join a session
+```
 
 ## Session Commands
 
 | Command | Description |
 |---------|-------------|
-| `/end` | End the session gracefully |
-| `/quit` | Disconnect from the session |
-| `/trust` | Toggle auto-approve mode for guest prompts |
-| `/kick` | Remove the connected guest (host only) |
-| `Ctrl+C` | Graceful shutdown with end-of-session summary |
+| `Ctrl+C` | Graceful shutdown with session summary |
 
-## Usage
+## Roadmap
 
-```
-pair-vibe                                   # Interactive wizard
-pair-vibe host                              # Host on LAN (default)
-pair-vibe host --tunnel cloudflare          # Host via Cloudflare Quick Tunnel
-pair-vibe host --relay wss://relay.co       # Host via relay server
-pair-vibe relay                             # Run relay server
-pair-vibe join <code> --url ws://...        # Join a session
-```
+- [ ] Support for additional AI coding tools (Codex CLI, Gemini CLI, etc.)
+- [ ] Rich terminal UI with Ink (React for the terminal)
+- [ ] Session recording and playback
+- [ ] Multi-guest sessions
 
 ## Development
 
@@ -88,8 +101,12 @@ npm run build
 npm test
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
 ## License
 
 [MIT](LICENSE)
+
+---
+
+<div align="center">
+<sub>Built with Claude Code</sub>
+</div>
