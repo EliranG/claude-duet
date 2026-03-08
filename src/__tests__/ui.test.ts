@@ -62,4 +62,13 @@ describe("TerminalUI", () => {
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
     expect(output).toContain("npx pair-vibe join pv-abc123 --password secret --url ws://192.168.1.5:4567");
   });
+
+  it("showWelcome includes a Slack-friendly share message", () => {
+    ui = new TerminalUI({ userName: "alice", role: "host" });
+    ui.showWelcome("pv-abc123", "secret", "ws://192.168.1.5:4567");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("pair-vibe");
+    expect(output).toContain("Slack");
+  });
 });

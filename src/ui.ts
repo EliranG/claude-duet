@@ -51,6 +51,9 @@ export class TerminalUI {
       console.log("");
       const joinCmd = `npx pair-vibe join ${sessionCode} --password ${password} --url ${connectUrl}`;
       console.log(`  ${pc.green(pc.bold(joinCmd))}`);
+      console.log("");
+      console.log(pc.dim("  Slack-friendly message (copy & share):"));
+      console.log(pc.dim(`  Hey! Join my pair-vibe session: \`${joinCmd}\``));
     } else {
       console.log(`  Share these with your partner to join.`);
     }
