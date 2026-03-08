@@ -39,10 +39,11 @@ describe("SessionLifecycle", () => {
     lifecycle.recordPrompt("bob");
     lifecycle.recordTurn(0.05, 3000);
     const summary = lifecycle.end("host_ended");
-    expect(summary.reason).toBe("host_ended");
-    expect(summary.stats.turns).toBe(1);
-    expect(summary.stats.totalCost).toBeCloseTo(0.05);
-    expect(summary.durationMs).toBeGreaterThanOrEqual(0);
+    expect(summary).not.toBeNull();
+    expect(summary!.reason).toBe("host_ended");
+    expect(summary!.stats.turns).toBe(1);
+    expect(summary!.stats.totalCost).toBeCloseTo(0.05);
+    expect(summary!.durationMs).toBeGreaterThanOrEqual(0);
     expect(lifecycle.isActive()).toBe(false);
   });
 

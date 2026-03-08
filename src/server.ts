@@ -32,7 +32,7 @@ export class PairVibeServer extends EventEmitter {
       this.wss = new WebSocketServer({ port });
       this.wss.on("listening", () => {
         const addr = this.wss!.address();
-        const listeningPort = typeof addr === "object" ? addr.port : 0;
+        const listeningPort = typeof addr === "object" && addr !== null ? addr.port : 0;
         resolve(listeningPort);
       });
       this.wss.on("connection", (ws) => this.handleConnection(ws));
