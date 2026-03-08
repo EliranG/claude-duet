@@ -1,4 +1,5 @@
 import pc from "picocolors";
+import * as readline from "node:readline";
 
 interface TerminalUIOptions {
   userName: string;
@@ -9,9 +10,33 @@ export class TerminalUI {
   private options: TerminalUIOptions;
   private inputHandler?: (text: string) => void;
   private approvalHandler?: (promptId: string, approved: boolean) => void;
+  private rl?: readline.Interface;
 
   constructor(options: TerminalUIOptions) {
     this.options = options;
+  }
+
+  startInputLoop(): void {
+    if (this.rl) return;
+    this.rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: "",
+    });
+    this.rl.on("line", (line) => {
+      const trimmed = line.trim();
+      if (trimmed && this.inputHandler) {
+        this.inputHandler(trimmed);
+      }
+    });
+  }
+
+  simulateInput(text: string): void {
+    if (this.inputHandler) this.inputHandler(text);
+  }
+
+  simulateApproval(promptId: string, approved: boolean): void {
+    if (this.approvalHandler) this.approvalHandler(promptId, approved);
   }
 
   showWelcome(sessionCode: string, password: string): void {
@@ -80,6 +105,7 @@ export class TerminalUI {
   }
 
   close(): void {
-    // Cleanup if needed
+    this.rl?.close();
+    this.rl = undefined;
   }
 }
