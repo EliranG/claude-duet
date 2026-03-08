@@ -31,24 +31,32 @@ User A's machine (host)
 │  ├── Prompt Router                  │  ← attributes prompts by user
 │  ├── WebSocket Server (:random)     │  ← real-time comms
 │  ├── Approval Engine                │  ← host approves partner prompts
-│  └── Tunnel Client (bore)           │  ← NAT traversal
+│  └── E2E Encryption (NaCl)         │  ← all messages encrypted
 └─────────────────────────────────────┘
             │
-            │  wss:// (E2E encrypted)
-            ▼
-┌─────────────────────────────────────┐
-│  Relay (bore.pub)                   │  ← stateless byte forwarder
-└─────────────────────────────────────┘
+            │  ws:// or wss:// (E2E encrypted payload)
             │
-            │  wss://
+            │  Connection modes (user chooses):
+            │  ┌─ LAN direct (default): ws://192.168.x.x:PORT
+            │  ├─ Cloudflare tunnel (opt-in): wss://random.trycloudflare.com
+            │  ├─ Self-hosted relay (opt-in): wss://relay.mycompany.com
+            │  └─ Custom URL: SSH tunnel, Tailscale, VPN, etc.
+            │
             ▼
 ┌─────────────────────────────────────┐
 │  User B's machine (joiner)          │
 │  └── pair-vibe join                 │
 │      ├── WebSocket Client           │
+│      ├── E2E Encryption (NaCl)     │
 │      └── TUI (conversation + input) │
 └─────────────────────────────────────┘
 ```
+
+**Zero third-party relay dependencies in the package.** The connection layer uses:
+- LAN by default (no relay needed)
+- User's own `cloudflared` binary (opt-in, they install it themselves)
+- Self-hosted relay included in the package (~50 LOC WebSocket proxy)
+- Any custom URL the user provides (SSH tunnel, Tailscale, etc.)
 
 ## Key Design Decisions
 
@@ -119,21 +127,27 @@ All messages are JSON, encrypted before transmission:
 | Claude integration | `@anthropic-ai/claude-agent-sdk` |
 | WebSocket | `ws` |
 | CLI framework | `commander` |
-| Tunnel | `bore-cli` (via npx) or `localtunnel` |
 | Encryption | `tweetnacl` + `tweetnacl-util` |
 | Session codes | `nanoid` |
 | Terminal UI | `chalk` + raw readline (MVP) |
+| Tunnel (opt-in) | User's own `cloudflared` (not bundled) |
+| Relay (opt-in) | Self-hosted relay included (~50 LOC) |
+
+**Zero third-party relay/tunnel npm dependencies.** No bore, no localtunnel, no ngrok.
 
 ## Scope
 
 ### MVP (v0.1)
-- `pair-vibe host` / `pair-vibe join <code>`
+- `pair-vibe host` / `pair-vibe join <code>` / `pair-vibe relay`
 - Two users, one session
 - Streaming conversation display
 - User attribution in prompts
 - Password-based E2E encryption
-- Approval mode
-- Tunnel via bore
+- Approval mode (default on)
+- Connection: LAN direct (default)
+- Connection: Cloudflare Quick Tunnel (opt-in, user installs cloudflared)
+- Connection: Self-hosted relay server (included in package)
+- Connection: Custom URL (SSH tunnel, Tailscale, VPN, etc.)
 
 ### Future (v0.2+)
 - Rich TUI with split panes (Ink)
@@ -141,5 +155,6 @@ All messages are JSON, encrypted before transmission:
 - Voice chat integration
 - More than 2 users
 - Claude Code skill integration (`/pair`)
-- Self-hosted relay option
+- Supabase Realtime Broadcast as managed relay option
+- Hyperswarm P2P (no server at all)
 - Session recording/playback

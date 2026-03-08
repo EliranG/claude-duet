@@ -4,9 +4,17 @@
 
 **Goal:** Build `pair-vibe`, an npm CLI tool that lets two users share a Claude Code session in real-time with E2E encryption and approval mode.
 
-**Architecture:** Host runs Claude Agent SDK + WebSocket server + tunnel. Joiner connects via WebSocket through the tunnel. All messages are encrypted. Host can approve/reject joiner's prompts.
+**Architecture:** Host runs Claude Agent SDK + WebSocket server. Joiner connects via WebSocket — directly on LAN (default), or through an optional tunnel/relay for remote. All messages are E2E encrypted. Host can approve/reject joiner's prompts.
 
-**Tech Stack:** TypeScript, `@anthropic-ai/claude-agent-sdk`, `ws`, `commander`, `tweetnacl`, `nanoid`, `chalk`, `bore-cli`/`localtunnel`
+**Tech Stack:** TypeScript, `@anthropic-ai/claude-agent-sdk`, `ws`, `commander`, `tweetnacl`, `nanoid`, `chalk` (zero third-party relay dependencies)
+
+**Connection Tiers:**
+| Tier | Mode | Third-Party? | How |
+|------|------|:---:|-----|
+| 1 (default) | Direct LAN/VPN | None | `ws://192.168.x.x:PORT` |
+| 2 (opt-in) | Cloudflare Quick Tunnel | User's own `cloudflared` | `--tunnel cloudflare` |
+| 3 (opt-in) | Self-hosted relay | Your own server | `--relay wss://relay.company.com` |
+| 4 (future) | Supabase Broadcast | Supabase (opt-in dep) | `--relay supabase` |
 
 ---
 
@@ -1456,30 +1464,47 @@ git commit -m "feat: add prompt router with approval mode"
 
 ---
 
-## Task 9: Tunnel Integration
+## Task 9: Connection Layer (LAN Auto-Detect + Optional Remote)
 
 **Files:**
-- Create: `src/tunnel.ts`
-- Create: `src/__tests__/tunnel.test.ts`
+- Create: `src/connection.ts`
+- Create: `src/relay-server.ts`
+- Create: `src/__tests__/connection.test.ts`
 
-**Step 1: Write the test**
+**Design:** Zero third-party relay dependencies. Connection tiers:
+1. **Direct LAN** (default) — auto-detect local IP, display for sharing
+2. **Cloudflare Quick Tunnel** (opt-in) — user's own `cloudflared` binary, no account needed
+3. **Self-hosted relay** (opt-in) — `pair-vibe relay` command, ~50 LOC WebSocket proxy included in package
+4. **Custom URL** — `--url ws://anything` for SSH tunnels, Tailscale, VPN, etc.
 
-Create `src/__tests__/tunnel.test.ts`:
+**Step 1: Write the tests**
+
+Create `src/__tests__/connection.test.ts`:
 ```typescript
-import { describe, it, expect, vi } from "vitest";
-import { parseTunnelUrl, formatSessionCode } from "../tunnel.js";
+import { describe, it, expect } from "vitest";
+import { getLocalIP, formatConnectionInfo } from "../connection.js";
 
-describe("tunnel utilities", () => {
-  it("formats a session code from tunnel URL and session code", () => {
-    const result = formatSessionCode("pv-abc123", "bore.pub", 12345);
-    // The session code should encode enough info for the client to connect
-    expect(result).toBe("pv-abc123");
+describe("connection utilities", () => {
+  it("detects a local IP address", () => {
+    const ip = getLocalIP();
+    // Should return a non-loopback IPv4 address
+    expect(ip).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
+    expect(ip).not.toBe("127.0.0.1");
   });
 
-  it("parses a tunnel URL correctly", () => {
-    const parsed = parseTunnelUrl("wss://bore.pub:12345");
-    expect(parsed.host).toBe("bore.pub");
-    expect(parsed.port).toBe(12345);
+  it("formats connection info for LAN mode", () => {
+    const info = formatConnectionInfo({ mode: "lan", host: "192.168.1.42", port: 9876 });
+    expect(info.url).toBe("ws://192.168.1.42:9876");
+    expect(info.displayUrl).toBe("ws://192.168.1.42:9876");
+  });
+
+  it("formats connection info for tunnel mode", () => {
+    const info = formatConnectionInfo({
+      mode: "tunnel",
+      host: "random-slug.trycloudflare.com",
+      port: 443,
+    });
+    expect(info.url).toBe("wss://random-slug.trycloudflare.com");
   });
 });
 ```
@@ -1487,132 +1512,175 @@ describe("tunnel utilities", () => {
 **Step 2: Run test to verify it fails**
 
 ```bash
-npx vitest run src/__tests__/tunnel.test.ts
+npx vitest run src/__tests__/connection.test.ts
 ```
 Expected: FAIL
 
-**Step 3: Implement**
+**Step 3: Implement connection utilities**
 
-Create `src/tunnel.ts`:
+Create `src/connection.ts`:
 ```typescript
+import { networkInterfaces } from "node:os";
 import { spawn, type ChildProcess } from "node:child_process";
 
-export interface TunnelInfo {
-  url: string;
-  process: ChildProcess;
-}
-
-export function parseTunnelUrl(url: string): { host: string; port: number } {
-  const parsed = new URL(url);
-  return {
-    host: parsed.hostname,
-    port: parseInt(parsed.port, 10),
-  };
-}
-
-export function formatSessionCode(code: string, _host: string, _port: number): string {
-  return code;
-}
-
-export async function startTunnel(localPort: number): Promise<TunnelInfo> {
-  // Try bore first, fall back to localtunnel
-  try {
-    return await startBoreTunnel(localPort);
-  } catch {
-    return await startLocaltunnel(localPort);
+export function getLocalIP(): string {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] ?? []) {
+      if (net.family === "IPv4" && !net.internal) {
+        return net.address;
+      }
+    }
   }
+  return "127.0.0.1";
 }
 
-async function startBoreTunnel(localPort: number): Promise<TunnelInfo> {
+export interface ConnectionInfo {
+  url: string;
+  displayUrl: string;
+  mode: "lan" | "tunnel" | "relay" | "custom";
+  cleanup?: () => void;
+}
+
+export function formatConnectionInfo(opts: {
+  mode: "lan" | "tunnel" | "relay" | "custom";
+  host: string;
+  port: number;
+}): ConnectionInfo {
+  if (opts.mode === "tunnel") {
+    const url = `wss://${opts.host}`;
+    return { url, displayUrl: url, mode: opts.mode };
+  }
+  const url = `ws://${opts.host}:${opts.port}`;
+  return { url, displayUrl: url, mode: opts.mode };
+}
+
+// Cloudflare Quick Tunnel — user must have `cloudflared` installed
+export async function startCloudflareTunnel(localPort: number): Promise<ConnectionInfo> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("npx", ["bore", "local", String(localPort), "--to", "bore.pub"], {
+    const proc = spawn("cloudflared", ["tunnel", "--url", `http://localhost:${localPort}`], {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
-    let output = "";
+    let stderr = "";
     const timeout = setTimeout(() => {
       proc.kill();
-      reject(new Error("bore tunnel timed out"));
+      reject(new Error(
+        "cloudflared timed out. Install it with: brew install cloudflared"
+      ));
     }, 30000);
 
-    proc.stdout!.on("data", (data: Buffer) => {
-      output += data.toString();
-      // bore prints: "listening at bore.pub:PORT"
-      const match = output.match(/listening at ([\w.-]+):(\d+)/);
+    // cloudflared prints the URL to stderr
+    proc.stderr!.on("data", (data: Buffer) => {
+      stderr += data.toString();
+      const match = stderr.match(/https:\/\/[\w-]+\.trycloudflare\.com/);
       if (match) {
         clearTimeout(timeout);
+        const httpsUrl = match[0];
+        const wssUrl = httpsUrl.replace("https://", "wss://");
         resolve({
-          url: `ws://${match[1]}:${match[2]}`,
-          process: proc,
+          url: wssUrl,
+          displayUrl: wssUrl,
+          mode: "tunnel",
+          cleanup: () => proc.kill(),
         });
       }
     });
 
     proc.on("error", () => {
       clearTimeout(timeout);
-      reject(new Error("bore not available"));
-    });
-
-    proc.on("exit", (code) => {
-      clearTimeout(timeout);
-      if (code !== 0) reject(new Error(`bore exited with code ${code}`));
+      reject(new Error(
+        "cloudflared not found. Install: brew install cloudflared\n" +
+        "Or use --url to connect directly (LAN, SSH tunnel, Tailscale, etc.)"
+      ));
     });
   });
 }
+```
 
-async function startLocaltunnel(localPort: number): Promise<TunnelInfo> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn("npx", ["localtunnel", "--port", String(localPort)], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+**Step 4: Implement the self-hosted relay server**
 
-    let output = "";
-    const timeout = setTimeout(() => {
-      proc.kill();
-      reject(new Error("localtunnel timed out"));
-    }, 30000);
+Create `src/relay-server.ts`:
+```typescript
+import { WebSocketServer, WebSocket } from "ws";
 
-    proc.stdout!.on("data", (data: Buffer) => {
-      output += data.toString();
-      const match = output.match(/your url is: (https?:\/\/[\w.-]+)/);
-      if (match) {
-        clearTimeout(timeout);
-        resolve({
-          url: match[1].replace("https://", "wss://").replace("http://", "ws://"),
-          process: proc,
-        });
+// A minimal WebSocket relay server (~50 LOC) that teams can self-host.
+// It pairs two clients into a "room" and relays messages between them.
+// It sees only ciphertext (E2E encrypted by the clients).
+
+interface Room {
+  host?: WebSocket;
+  guest?: WebSocket;
+}
+
+export function startRelayServer(port: number): void {
+  const rooms = new Map<string, Room>();
+  const wss = new WebSocketServer({ port });
+
+  console.log(`pair-vibe relay listening on ws://0.0.0.0:${port}`);
+
+  wss.on("connection", (ws, req) => {
+    const url = new URL(req.url || "/", `http://localhost:${port}`);
+    const roomId = url.searchParams.get("room");
+    const role = url.searchParams.get("role"); // "host" or "guest"
+
+    if (!roomId || !role) {
+      ws.close(4000, "Missing room or role query param");
+      return;
+    }
+
+    let room = rooms.get(roomId);
+    if (!room) {
+      room = {};
+      rooms.set(roomId, room);
+    }
+
+    if (role === "host") {
+      if (room.host) {
+        ws.close(4001, "Room already has a host");
+        return;
+      }
+      room.host = ws;
+    } else {
+      if (room.guest) {
+        ws.close(4002, "Room already has a guest");
+        return;
+      }
+      room.guest = ws;
+    }
+
+    // Relay messages to the other peer (opaque — we don't parse them)
+    ws.on("message", (data) => {
+      const peer = role === "host" ? room!.guest : room!.host;
+      if (peer?.readyState === WebSocket.OPEN) {
+        peer.send(data);
       }
     });
 
-    proc.on("error", () => {
-      clearTimeout(timeout);
-      reject(new Error("localtunnel not available"));
-    });
-
-    proc.on("exit", (code) => {
-      clearTimeout(timeout);
-      if (code !== 0) reject(new Error(`localtunnel exited with code ${code}`));
+    ws.on("close", () => {
+      if (role === "host") room!.host = undefined;
+      else room!.guest = undefined;
+      // Clean up empty rooms
+      if (!room!.host && !room!.guest) {
+        rooms.delete(roomId);
+      }
     });
   });
 }
-
-export function stopTunnel(tunnel: TunnelInfo): void {
-  tunnel.process.kill();
-}
 ```
 
-**Step 4: Run tests**
+**Step 5: Run tests**
 
 ```bash
-npx vitest run src/__tests__/tunnel.test.ts
+npx vitest run src/__tests__/connection.test.ts
 ```
-Expected: PASS (2 tests)
+Expected: PASS (all 3 tests)
 
-**Step 5: Commit**
+**Step 6: Commit**
 
 ```bash
-git add src/tunnel.ts src/__tests__/tunnel.test.ts
-git commit -m "feat: add tunnel integration with bore and localtunnel fallback"
+git add src/connection.ts src/relay-server.ts src/__tests__/connection.test.ts
+git commit -m "feat: add connection layer with LAN auto-detect, Cloudflare tunnel, and self-hosted relay"
 ```
 
 ---
@@ -1780,7 +1848,7 @@ git commit -m "feat: add terminal UI with colored output and approval prompts"
 
 ---
 
-## Task 11: CLI Commands — `host` and `join`
+## Task 11: CLI Commands — `host`, `join`, and `relay`
 
 **Files:**
 - Modify: `src/index.ts`
@@ -1795,13 +1863,14 @@ import { PairVibeServer } from "../server.js";
 import { ClaudeBridge } from "../claude.js";
 import { PromptRouter } from "../router.js";
 import { TerminalUI } from "../ui.js";
-import { startTunnel, stopTunnel, type TunnelInfo } from "../tunnel.js";
+import { getLocalIP, formatConnectionInfo, startCloudflareTunnel, type ConnectionInfo } from "../connection.js";
 import { SessionManager } from "../session.js";
 
 interface HostOptions {
   name: string;
   noApproval: boolean;
-  noTunnel: boolean;
+  tunnel?: "cloudflare";
+  relay?: string;
   port: number;
 }
 
@@ -1821,19 +1890,29 @@ export async function hostCommand(options: HostOptions): Promise<void> {
   // Start WebSocket server
   const port = await server.start(options.port || 0);
 
-  // Start tunnel if not disabled
-  let tunnel: TunnelInfo | undefined;
-  if (!options.noTunnel) {
+  // Determine connection mode
+  let connInfo: ConnectionInfo;
+  if (options.tunnel === "cloudflare") {
     try {
-      ui.showSystem("Starting tunnel...");
-      tunnel = await startTunnel(port);
-      ui.showSystem(`Tunnel ready: ${tunnel.url}`);
+      ui.showSystem("Starting Cloudflare tunnel...");
+      connInfo = await startCloudflareTunnel(port);
+      ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
     } catch (err) {
-      ui.showSystem(`Tunnel failed: ${err}. Using localhost:${port}`);
+      ui.showError(String(err));
+      const localIP = getLocalIP();
+      connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
     }
+  } else if (options.relay) {
+    connInfo = formatConnectionInfo({ mode: "relay", host: options.relay, port: 0 });
+    ui.showSystem(`Using relay: ${options.relay}`);
+  } else {
+    // Default: LAN direct connection
+    const localIP = getLocalIP();
+    connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
   }
 
   ui.showWelcome(session.code, session.password);
+  ui.showSystem(`Connect URL: ${connInfo.displayUrl}`);
 
   // Wire up Claude events → server broadcast
   claude.on("event", (event) => {
@@ -2019,6 +2098,7 @@ Rewrite `src/index.ts`:
 import { Command } from "commander";
 import { hostCommand } from "./commands/host.js";
 import { joinCommand } from "./commands/join.js";
+import { startRelayServer } from "./relay-server.js";
 
 const program = new Command();
 
@@ -2032,13 +2112,15 @@ program
   .description("Start a pair-vibe session as host")
   .option("-n, --name <name>", "your display name", process.env.USER || "host")
   .option("--no-approval", "disable approval mode (trust your partner)")
-  .option("--no-tunnel", "skip tunnel setup, use localhost only")
+  .option("--tunnel <provider>", "use a tunnel for remote access (cloudflare)")
+  .option("--relay <url>", "use a relay server for remote access")
   .option("-p, --port <port>", "WebSocket server port", "0")
   .action((options) => {
     hostCommand({
       name: options.name,
       noApproval: !options.approval,
-      noTunnel: !options.tunnel,
+      tunnel: options.tunnel,
+      relay: options.relay,
       port: parseInt(options.port, 10),
     });
   });
@@ -2048,10 +2130,10 @@ program
   .description("Join an existing pair-vibe session")
   .option("-n, --name <name>", "your display name", process.env.USER || "guest")
   .option("--password <password>", "session password")
-  .option("--url <url>", "direct WebSocket URL (skip session code resolution)")
+  .option("--url <url>", "WebSocket URL (direct, SSH tunnel, VPN, etc.)")
+  .option("--relay <url>", "connect via a relay server")
   .action((sessionCode, options) => {
     if (!options.password) {
-      // In future: prompt interactively
       console.error("Error: --password is required");
       process.exit(1);
     }
@@ -2059,7 +2141,16 @@ program
       name: options.name,
       password: options.password,
       url: options.url,
+      relay: options.relay,
     });
+  });
+
+program
+  .command("relay")
+  .description("Run a self-hosted relay server for remote pair-vibe sessions")
+  .option("-p, --port <port>", "relay server port", "9877")
+  .action((options) => {
+    startRelayServer(parseInt(options.port, 10));
   });
 
 program.parse();
@@ -2072,6 +2163,7 @@ npx tsc
 node dist/index.js --help
 node dist/index.js host --help
 node dist/index.js join --help
+node dist/index.js relay --help
 ```
 Expected: Help text for all commands
 
@@ -2271,10 +2363,19 @@ git commit -m "chore: finalize package.json for npm publishing"
 | 6 | WebSocket server | 4 tests |
 | 7 | WebSocket client | 4 tests |
 | 8 | Prompt router + approval | 5 tests |
-| 9 | Tunnel integration | 2 tests |
+| 9 | Connection layer (LAN + Cloudflare tunnel + self-hosted relay) | 3 tests |
 | 10 | Terminal UI | Visual (no tests) |
-| 11 | CLI commands (host + join) | CLI verification |
+| 11 | CLI commands (host + join + relay) | CLI verification |
 | 12 | Integration test | 2 tests |
 | 13 | Polish & package | npm link verification |
 
-**Total: 13 tasks, ~35 tests, ~13 commits**
+**Total: 13 tasks, ~36 tests, ~13 commits**
+
+**Connection modes (all E2E encrypted):**
+```
+pair-vibe host                              # LAN direct (default)
+pair-vibe host --tunnel cloudflare          # Cloudflare Quick Tunnel (opt-in)
+pair-vibe host --relay wss://relay.co       # Self-hosted relay (opt-in)
+pair-vibe relay                             # Run the relay server (~50 LOC)
+pair-vibe join <code> --url ws://...        # Any URL (SSH tunnel, VPN, etc.)
+```
