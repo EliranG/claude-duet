@@ -75,7 +75,8 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
 async function resolveSessionUrl(sessionCode: string): Promise<string> {
   throw new Error(
-    `Cannot resolve session "${sessionCode}" \u2014 use --url to specify the server URL directly.\n` +
-    `  Example: pair-vibe join ${sessionCode} --url ws://localhost:3000`
+    `Session discovery not available \u2014 use --url to connect directly.\n` +
+    `  Ask the host for the join command, or run:\n` +
+    `  pair-vibe join ${sessionCode} --password <password> --url ws://<host-ip>:<port>`
   );
 }
