@@ -13,7 +13,7 @@ describe("protocol type guards", () => {
     const msg: PromptMessage = {
       type: "prompt",
       id: "abc",
-      user: "bob",
+      user: "benji",
       text: "fix the bug",
       timestamp: Date.now(),
     };
@@ -35,7 +35,7 @@ describe("protocol type guards", () => {
     const msg = {
       type: "approval_request",
       promptId: "abc",
-      user: "bob",
+      user: "benji",
       text: "delete all files",
       timestamp: Date.now(),
     };
@@ -45,7 +45,7 @@ describe("protocol type guards", () => {
   it("identifies a presence message", () => {
     const msg = {
       type: "presence",
-      users: [{ name: "alice", role: "host" }],
+      users: [{ name: "eliran", role: "host" }],
       timestamp: Date.now(),
     };
     expect(isPresenceMessage(msg)).toBe(true);

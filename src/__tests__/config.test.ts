@@ -30,34 +30,34 @@ describe("config", () => {
   });
 
   it("loadProjectConfig reads .claude-duet.json", async () => {
-    writeFileSync(join(tempDir, ".claude-duet.json"), JSON.stringify({ name: "alice", port: 3000 }));
+    writeFileSync(join(tempDir, ".claude-duet.json"), JSON.stringify({ name: "eliran", port: 3000 }));
     vi.resetModules();
     const { loadProjectConfig } = await import("../config.js");
     const config = loadProjectConfig();
-    expect(config.name).toBe("alice");
+    expect(config.name).toBe("eliran");
     expect(config.port).toBe(3000);
   });
 
   it("saveProjectConfig writes .claude-duet.json", async () => {
     vi.resetModules();
     const { saveProjectConfig, loadProjectConfig } = await import("../config.js");
-    saveProjectConfig({ name: "bob", approvalMode: true });
+    saveProjectConfig({ name: "benji", approvalMode: true });
     vi.resetModules();
     const { loadProjectConfig: reload } = await import("../config.js");
     const config = reload();
-    expect(config.name).toBe("bob");
+    expect(config.name).toBe("benji");
     expect(config.approvalMode).toBe(true);
   });
 
   it("saveProjectConfig merges with existing", async () => {
-    writeFileSync(join(tempDir, ".claude-duet.json"), JSON.stringify({ name: "alice", port: 3000 }));
+    writeFileSync(join(tempDir, ".claude-duet.json"), JSON.stringify({ name: "eliran", port: 3000 }));
     vi.resetModules();
     const { saveProjectConfig } = await import("../config.js");
     saveProjectConfig({ port: 4000 });
     vi.resetModules();
     const { loadProjectConfig } = await import("../config.js");
     const config = loadProjectConfig();
-    expect(config.name).toBe("alice");
+    expect(config.name).toBe("eliran");
     expect(config.port).toBe(4000);
   });
 
@@ -76,7 +76,7 @@ describe("config", () => {
     expect(parseConfigValue("approvalMode", "true")).toBe(true);
     expect(parseConfigValue("approvalMode", "false")).toBe(false);
     expect(parseConfigValue("port", "3000")).toBe(3000);
-    expect(parseConfigValue("name", "alice")).toBe("alice");
+    expect(parseConfigValue("name", "eliran")).toBe("eliran");
   });
 
   it("loadConfig merges user and project (project wins)", async () => {

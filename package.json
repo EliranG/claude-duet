@@ -1,6 +1,6 @@
 {
   "name": "claude-duet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude duet coding — share a Claude Code session with a partner",
   "type": "module",
   "main": "dist/index.js",

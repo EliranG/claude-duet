@@ -10,13 +10,13 @@ describe("ClaudeDuetServer", () => {
   });
 
   it("starts on a random port and returns the port", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
     expect(port).toBeGreaterThan(0);
   });
 
   it("accepts a WebSocket connection", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     const ws = new WebSocket(`ws://localhost:${port}`);
@@ -27,7 +27,7 @@ describe("ClaudeDuetServer", () => {
   });
 
   it("rejects connections with wrong password", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     const ws = new WebSocket(`ws://localhost:${port}`);
@@ -37,7 +37,7 @@ describe("ClaudeDuetServer", () => {
     ws.send(
       JSON.stringify({
         type: "join",
-        user: "bob",
+        user: "benji",
         passwordHash: "wrongpassword",
         timestamp: Date.now(),
       }),
@@ -52,7 +52,7 @@ describe("ClaudeDuetServer", () => {
   });
 
   it("accepts connections with correct password", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     const ws = new WebSocket(`ws://localhost:${port}`);
@@ -61,7 +61,7 @@ describe("ClaudeDuetServer", () => {
     ws.send(
       JSON.stringify({
         type: "join",
-        user: "bob",
+        user: "benji",
         passwordHash: "test1234",
         timestamp: Date.now(),
       }),
@@ -72,7 +72,7 @@ describe("ClaudeDuetServer", () => {
     });
 
     expect(response.type).toBe("join_accepted");
-    expect(response.hostUser).toBe("alice");
+    expect(response.hostUser).toBe("eliran");
     ws.close();
   });
 });

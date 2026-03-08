@@ -19,41 +19,41 @@ describe("chat messages", () => {
   });
 
   it("isChatMessage type guard works", () => {
-    expect(isChatMessage({ type: "chat", id: "1", user: "bob", text: "hi", timestamp: 1 })).toBe(true);
-    expect(isChatMessage({ type: "prompt", id: "1", user: "bob", text: "hi", timestamp: 1 })).toBe(false);
+    expect(isChatMessage({ type: "chat", id: "1", user: "benji", text: "hi", timestamp: 1 })).toBe(true);
+    expect(isChatMessage({ type: "prompt", id: "1", user: "benji", text: "hi", timestamp: 1 })).toBe(false);
     expect(isChatMessage(null)).toBe(false);
   });
 
   it("client.sendChat sends a chat message", async () => {
     server = new ClaudeDuetServer({
-      hostUser: "alice",
+      hostUser: "eliran",
       password: "test1234",
     });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
 
     const chatEvents: any[] = [];
     server.on("chat", (msg) => chatEvents.push(msg));
 
-    client.sendChat("hello alice!");
+    client.sendChat("hello eliran!");
     await new Promise((r) => setTimeout(r, 100));
 
     expect(chatEvents).toHaveLength(1);
-    expect(chatEvents[0].user).toBe("bob");
-    expect(chatEvents[0].text).toBe("hello alice!");
+    expect(chatEvents[0].user).toBe("benji");
+    expect(chatEvents[0].text).toBe("hello eliran!");
   });
 
   it("server broadcasts chat_received to guest", async () => {
     server = new ClaudeDuetServer({
-      hostUser: "alice",
+      hostUser: "eliran",
       password: "test1234",
     });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
 
     const received: any[] = [];
     client.on("message", (msg) => {
@@ -63,27 +63,27 @@ describe("chat messages", () => {
     // Simulate host broadcasting a chat
     server.broadcast({
       type: "chat_received",
-      user: "alice",
-      text: "hey bob!",
+      user: "eliran",
+      text: "hey benji!",
       timestamp: Date.now(),
     });
 
     await new Promise((r) => setTimeout(r, 100));
 
     expect(received).toHaveLength(1);
-    expect(received[0].user).toBe("alice");
-    expect(received[0].text).toBe("hey bob!");
+    expect(received[0].user).toBe("eliran");
+    expect(received[0].text).toBe("hey benji!");
   });
 
   it("chat messages do not trigger prompt event", async () => {
     server = new ClaudeDuetServer({
-      hostUser: "alice",
+      hostUser: "eliran",
       password: "test1234",
     });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
 
     const promptEvents: any[] = [];
     const chatEvents: any[] = [];

@@ -9,7 +9,7 @@ function createMockContext(overrides?: Partial<CommandContext>): CommandContext 
     } as any,
     role: "host",
     sessionCode: "cd-test123",
-    partnerName: "bob",
+    partnerName: "benji",
     startTime: Date.now() - 120000, // 2 minutes ago
     onLeave: vi.fn(),
     onTrustChange: vi.fn(),
@@ -73,7 +73,7 @@ describe("session commands", () => {
     const calls = (ctx.ui.showSystem as any).mock.calls.map((c: any[]) => c[0]).join("\n");
     expect(calls).toContain("cd-test123");
     expect(calls).toContain("host");
-    expect(calls).toContain("bob");
+    expect(calls).toContain("benji");
     expect(calls).toContain("2m");
   });
 

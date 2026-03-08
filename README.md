@@ -10,6 +10,8 @@
 Vibe code with a friend — share your Claude Code session in real-time.
 Chat with each other, summon Claude together, ship faster.
 
+<img src="docs/assets/demo.gif" alt="claude-duet demo" width="700">
+
 </div>
 
 ---

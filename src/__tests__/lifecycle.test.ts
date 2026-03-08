@@ -5,7 +5,7 @@ describe("SessionLifecycle", () => {
   let lifecycle: SessionLifecycle;
 
   beforeEach(() => {
-    lifecycle = new SessionLifecycle("cd-test123", "alice");
+    lifecycle = new SessionLifecycle("cd-test123", "eliran");
   });
 
   it("tracks session start time", () => {
@@ -16,12 +16,12 @@ describe("SessionLifecycle", () => {
 
   it("tracks prompt counts by user", () => {
     lifecycle.start();
-    lifecycle.recordPrompt("alice");
-    lifecycle.recordPrompt("alice");
-    lifecycle.recordPrompt("bob");
+    lifecycle.recordPrompt("eliran");
+    lifecycle.recordPrompt("eliran");
+    lifecycle.recordPrompt("benji");
     const stats = lifecycle.getStats();
-    expect(stats.promptsByUser["alice"]).toBe(2);
-    expect(stats.promptsByUser["bob"]).toBe(1);
+    expect(stats.promptsByUser["eliran"]).toBe(2);
+    expect(stats.promptsByUser["benji"]).toBe(1);
   });
 
   it("tracks turn count and cost", () => {
@@ -35,8 +35,8 @@ describe("SessionLifecycle", () => {
 
   it("generates end summary", () => {
     lifecycle.start();
-    lifecycle.recordPrompt("alice");
-    lifecycle.recordPrompt("bob");
+    lifecycle.recordPrompt("eliran");
+    lifecycle.recordPrompt("benji");
     lifecycle.recordTurn(0.05, 3000);
     const summary = lifecycle.end("host_ended");
     expect(summary).not.toBeNull();

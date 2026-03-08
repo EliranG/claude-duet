@@ -20,30 +20,30 @@ describe("PromptRouter", () => {
     const claude = new ClaudeBridge();
     const server = { broadcast: vi.fn(), on: vi.fn() } as any;
 
-    const router = new PromptRouter(claude, server, { hostUser: "alice", approvalMode: true });
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: true });
 
     const msg: PromptMessage = {
       type: "prompt",
       id: "1",
-      user: "alice",
+      user: "eliran",
       text: "fix the bug",
       timestamp: Date.now(),
     };
 
     await router.handlePrompt(msg);
-    expect(claude.sendPrompt).toHaveBeenCalledWith("alice", "fix the bug", { isHost: true });
+    expect(claude.sendPrompt).toHaveBeenCalledWith("eliran", "fix the bug", { isHost: true });
   });
 
   it("queues guest prompts for approval when approval mode is on", async () => {
     const claude = new ClaudeBridge();
     const server = { broadcast: vi.fn(), on: vi.fn() } as any;
 
-    const router = new PromptRouter(claude, server, { hostUser: "alice", approvalMode: true });
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: true });
 
     const msg: PromptMessage = {
       type: "prompt",
       id: "1",
-      user: "bob",
+      user: "benji",
       text: "delete everything",
       timestamp: Date.now(),
     };
@@ -54,7 +54,7 @@ describe("PromptRouter", () => {
     expect(claude.sendPrompt).not.toHaveBeenCalled();
     // Should broadcast approval request
     expect(server.broadcast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "approval_request", user: "bob" })
+      expect.objectContaining({ type: "approval_request", user: "benji" })
     );
   });
 
@@ -62,31 +62,31 @@ describe("PromptRouter", () => {
     const claude = new ClaudeBridge();
     const server = { broadcast: vi.fn(), on: vi.fn() } as any;
 
-    const router = new PromptRouter(claude, server, { hostUser: "alice", approvalMode: false });
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: false });
 
     const msg: PromptMessage = {
       type: "prompt",
       id: "1",
-      user: "bob",
+      user: "benji",
       text: "fix the bug",
       timestamp: Date.now(),
     };
 
     await router.handlePrompt(msg);
-    expect(claude.sendPrompt).toHaveBeenCalledWith("bob", "fix the bug", { isHost: false });
+    expect(claude.sendPrompt).toHaveBeenCalledWith("benji", "fix the bug", { isHost: false });
   });
 
   it("executes prompt after approval", async () => {
     const claude = new ClaudeBridge();
     const server = { broadcast: vi.fn(), on: vi.fn() } as any;
 
-    const router = new PromptRouter(claude, server, { hostUser: "alice", approvalMode: true });
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: true });
 
     // Queue a prompt
     const msg: PromptMessage = {
       type: "prompt",
       id: "prompt-1",
-      user: "bob",
+      user: "benji",
       text: "fix the bug",
       timestamp: Date.now(),
     };
@@ -94,19 +94,19 @@ describe("PromptRouter", () => {
 
     // Approve it
     await router.handleApproval({ promptId: "prompt-1", approved: true });
-    expect(claude.sendPrompt).toHaveBeenCalledWith("bob", "fix the bug", { isHost: false });
+    expect(claude.sendPrompt).toHaveBeenCalledWith("benji", "fix the bug", { isHost: false });
   });
 
   it("discards prompt after rejection", async () => {
     const claude = new ClaudeBridge();
     const server = { broadcast: vi.fn(), on: vi.fn() } as any;
 
-    const router = new PromptRouter(claude, server, { hostUser: "alice", approvalMode: true });
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: true });
 
     const msg: PromptMessage = {
       type: "prompt",
       id: "prompt-1",
-      user: "bob",
+      user: "benji",
       text: "delete everything",
       timestamp: Date.now(),
     };

@@ -9,14 +9,14 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 describe("ClaudeBridge", () => {
   it("formats prompts with user attribution", () => {
     const bridge = new ClaudeBridge();
-    const formatted = bridge.formatPrompt("bob", "fix the login bug");
-    expect(formatted).toBe("[bob]: fix the login bug");
+    const formatted = bridge.formatPrompt("benji", "fix the login bug");
+    expect(formatted).toBe("[benji]: fix the login bug");
   });
 
   it("formats prompts from host without prefix option", () => {
     const bridge = new ClaudeBridge();
-    const formatted = bridge.formatPrompt("alice", "do something", { isHost: true });
-    expect(formatted).toBe("[alice (host)]: do something");
+    const formatted = bridge.formatPrompt("eliran", "do something", { isHost: true });
+    expect(formatted).toBe("[eliran (host)]: do something");
   });
 
   it("emits events from the event emitter interface", () => {

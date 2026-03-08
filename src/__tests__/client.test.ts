@@ -12,35 +12,35 @@ describe("ClaudeDuetClient", () => {
   });
 
   it("connects and joins with correct password", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
     const result = await client.connect(
       `ws://localhost:${port}`,
-      "bob",
+      "benji",
       "test1234",
     );
     expect(result.type).toBe("join_accepted");
-    expect(result.hostUser).toBe("alice");
+    expect(result.hostUser).toBe("eliran");
   });
 
   it("fails to join with wrong password", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
     await expect(
-      client.connect(`ws://localhost:${port}`, "bob", "wrongpass"),
+      client.connect(`ws://localhost:${port}`, "benji", "wrongpass"),
     ).rejects.toThrow("Invalid password");
   });
 
   it("receives broadcast messages", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
 
     const messages: any[] = [];
     client.on("message", (msg) => messages.push(msg));
@@ -58,11 +58,11 @@ describe("ClaudeDuetClient", () => {
   });
 
   it("sends prompts to server", async () => {
-    server = new ClaudeDuetServer({ hostUser: "alice", password: "test1234" });
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: "test1234" });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "bob", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
 
     const prompts: any[] = [];
     server.on("prompt", (msg) => prompts.push(msg));
@@ -71,7 +71,7 @@ describe("ClaudeDuetClient", () => {
 
     await new Promise((r) => setTimeout(r, 50));
     expect(prompts).toHaveLength(1);
-    expect(prompts[0].user).toBe("bob");
+    expect(prompts[0].user).toBe("benji");
     expect(prompts[0].text).toBe("fix the bug");
   });
 });
