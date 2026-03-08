@@ -48,12 +48,13 @@ REPO_DIR="__REPO_DIR__"
 SESSION_DIR="__SESSION_DIR__"
 
 cd "$REPO_DIR"
+clear
 echo ""
-echo "  ┌─────────────────────────────────┐"
-echo "  │  HOST TERMINAL  —  Eliran        │"
-echo "  │  Type your prompts below        │"
-echo "  │  Press Ctrl+C to end session    │"
-echo "  └─────────────────────────────────┘"
+echo "  ┌───────────────────────────────┐"
+echo "  │  HOST TERMINAL — Eliran       │"
+echo "  │  Type your prompts below      │"
+echo "  │  Press Ctrl+C to end session  │"
+echo "  └───────────────────────────────┘"
 echo ""
 
 # tail -f watches the input file for new lines appended by the orchestrator.
@@ -74,12 +75,13 @@ REPO_DIR="__REPO_DIR__"
 SESSION_DIR="__SESSION_DIR__"
 
 cd "$REPO_DIR"
+clear
 echo ""
-echo "  ┌─────────────────────────────────┐"
-echo "  │  GUEST TERMINAL  —  Benji         │"
-echo "  │  Waiting for host to start...   │"
-echo "  │  Press Ctrl+C to leave session  │"
-echo "  └─────────────────────────────────┘"
+echo "  ┌──────────────────────────────────┐"
+echo "  │  GUEST TERMINAL — Benji          │"
+echo "  │  Waiting for host to start...    │"
+echo "  │  Press Ctrl+C to leave session   │"
+echo "  └──────────────────────────────────┘"
 echo ""
 
 # Poll for the join command in host output

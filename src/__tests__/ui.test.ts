@@ -113,4 +113,64 @@ describe("TerminalUI", () => {
     expect(output).toContain("claude-duet");
     expect(output).toContain("Slack");
   });
+
+  it("showUserPrompt with mode 'claude' shows Claude indicator", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.showUserPrompt("bob", "fix the bug", false, "claude");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("bob");
+    expect(output).toContain("Claude");
+    expect(output).toContain("fix the bug");
+  });
+
+  it("showClaudeThinking outputs thinking text", () => {
+    ui = new TerminalUI({ userName: "alice", role: "host" });
+    ui.showClaudeThinking();
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("Claude is thinking");
+  });
+
+  it("showApprovalStatus('pending') shows waiting text", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.showApprovalStatus("pending");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("Waiting for host to approve");
+  });
+
+  it("showApprovalStatus('approved') shows approved text", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.showApprovalStatus("approved");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("Approved");
+  });
+
+  it("showApprovalStatus('rejected') shows rejected text", () => {
+    ui = new TerminalUI({ userName: "bob", role: "guest" });
+    ui.showApprovalStatus("rejected");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("rejected");
+  });
+
+  it("showSessionSummary shows duration and message count", () => {
+    ui = new TerminalUI({ userName: "alice", role: "host" });
+    ui.showSessionSummary({ duration: "5m 30s", messageCount: 12 });
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("Session ended");
+    expect(output).toContain("5m 30s");
+    expect(output).toContain("12");
+  });
+
+  it("showHint shows hint text", () => {
+    ui = new TerminalUI({ userName: "alice", role: "host" });
+    ui.showHint("Type @claude to ask Claude");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("Type @claude to ask Claude");
+  });
 });

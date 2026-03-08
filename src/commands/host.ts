@@ -4,6 +4,8 @@ import { PromptRouter } from "../router.js";
 import { TerminalUI } from "../ui.js";
 import { getLocalIP, formatConnectionInfo, startCloudflareTunnel, type ConnectionInfo } from "../connection.js";
 import { SessionManager } from "../session.js";
+import { handleSlashCommand, type CommandContext } from "./session-commands.js";
+import { loadConfig } from "../config.js";
 
 interface HostOptions {
   name: string;
@@ -49,6 +51,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
 
   ui.showWelcome(session.code, session.password, connInfo.displayUrl);
   ui.startInputLoop();
+  ui.showHint("Type a message to chat, or @claude <prompt> to ask Claude. /help for commands.");
 
   claude.on("event", (event) => {
     switch (event.type) {
@@ -85,29 +88,85 @@ export async function hostCommand(options: HostOptions): Promise<void> {
   });
 
   server.on("prompt", (msg) => {
-    ui.showUserPrompt(msg.user, msg.text, false);
+    ui.showUserPrompt(msg.user, msg.text, false, "claude");
     router.handlePrompt(msg);
   });
+
+  server.on("chat", (msg) => {
+    ui.showUserPrompt(msg.user, msg.text, false, "chat");
+  });
+
+  let messageCount = 0;
+  const sessionStartTime = Date.now();
+
+  // Build command context for slash commands
+  const cmdCtx: CommandContext = {
+    ui,
+    role: "host",
+    sessionCode: session.code,
+    partnerName: undefined,
+    startTime: sessionStartTime,
+    onLeave: async () => {
+      const elapsed = Date.now() - sessionStartTime;
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      ui.showSessionSummary({
+        duration: `${minutes}m ${seconds}s`,
+        messageCount,
+      });
+      connInfo.cleanup?.();
+      await server.stop();
+      ui.close();
+      process.exit(0);
+    },
+    onTrustChange: (trusted) => {
+      router.setApprovalMode(!trusted);
+    },
+    onKick: () => {
+      server.kickGuest();
+    },
+  };
 
   server.on("guest_joined", (user: string) => {
     sessionManager.addGuest(session.code, user);
     ui.showPartnerJoined(user);
+    cmdCtx.partnerName = user;
   });
 
   server.on("guest_left", () => {
     ui.showPartnerLeft(server.getGuestUser() || "partner");
+    cmdCtx.partnerName = undefined;
   });
 
   ui.onInput((text) => {
-    const msg = {
-      type: "prompt" as const,
-      id: `host-${Date.now()}`,
-      user: options.name,
-      text,
-      timestamp: Date.now(),
-    };
-    ui.showUserPrompt(options.name, text, true);
-    router.handlePrompt(msg);
+    messageCount++;
+
+    // Slash commands
+    if (handleSlashCommand(text, cmdCtx)) return;
+
+    if (text.startsWith("@claude ")) {
+      // Claude prompt
+      const prompt = text.slice(8);
+      const msg = {
+        type: "prompt" as const,
+        id: `host-${Date.now()}`,
+        user: options.name,
+        text: prompt,
+        timestamp: Date.now(),
+      };
+      ui.showUserPrompt(options.name, prompt, true, "claude");
+      ui.showClaudeThinking();
+      router.handlePrompt(msg);
+    } else {
+      // Chat message — broadcast to guest, don't send to Claude
+      ui.showUserPrompt(options.name, text, true, "chat");
+      server.broadcast({
+        type: "chat_received" as any,
+        user: options.name,
+        text,
+        timestamp: Date.now(),
+      });
+    }
   });
 
   ui.onApproval((promptId, approved) => {
@@ -124,7 +183,13 @@ export async function hostCommand(options: HostOptions): Promise<void> {
   });
 
   process.on("SIGINT", async () => {
-    ui.showSystem("Shutting down...");
+    const elapsed = Date.now() - sessionStartTime;
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    ui.showSessionSummary({
+      duration: `${minutes}m ${seconds}s`,
+      messageCount,
+    });
     connInfo.cleanup?.();
     await server.stop();
     ui.close();

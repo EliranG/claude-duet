@@ -18,6 +18,16 @@ export class TerminalUI {
     this.options = options;
   }
 
+  private sessionText(text: string): string {
+    return this.background ? pc.white(text) : pc.dim(text);
+  }
+
+  private showInputPrompt(): void {
+    if (this.background) {
+      process.stdout.write(pc.gray("⟩ "));
+    }
+  }
+
   startInputLoop(): void {
     if (this.rl) return;
     this.rl = readline.createInterface({
@@ -30,7 +40,9 @@ export class TerminalUI {
       if (trimmed && this.inputHandler) {
         this.inputHandler(trimmed);
       }
+      this.showInputPrompt();
     });
+    this.showInputPrompt();
   }
 
   simulateInput(text: string): void {
@@ -44,6 +56,7 @@ export class TerminalUI {
   applySessionBackground(): void {
     if (this.background) return; // Already applied
     this.background = pickSessionBackground();
+    process.stdout.write("\x1b[2J\x1b[H"); // Clear screen + cursor to top
     process.stdout.write(applyBackground(this.background));
   }
 
@@ -61,26 +74,65 @@ export class TerminalUI {
       const joinCmd = `npx claude-duet join ${sessionCode} --password ${password} --url ${connectUrl}`;
       console.log(`  ${pc.green(pc.bold(joinCmd))}`);
       console.log("");
-      console.log(pc.dim("  Slack-friendly message (copy & share):"));
-      console.log(pc.dim(`  Hey! Join my claude-duet session: \`${joinCmd}\``));
+      console.log(this.sessionText("  Slack-friendly message (copy & share):"));
+      console.log(this.sessionText(`  Hey! Join my claude-duet session: \`${joinCmd}\``));
     } else {
       console.log(`  Share these with your partner to join.`);
     }
     console.log("");
+    this.showInputPrompt();
   }
 
   showSystem(message: string): void {
-    console.log(pc.dim(`  ${message}`));
+    console.log(this.sessionText(`  ${message}`));
   }
 
   showError(message: string): void {
     console.error(pc.red(`  Error: ${message}`));
   }
 
-  showUserPrompt(user: string, text: string, isHost: boolean): void {
-    const color = isHost ? pc.blue : pc.magenta;
+  showUserPrompt(user: string, text: string, isHost: boolean, mode: "chat" | "claude" = "chat"): void {
     const label = isHost ? `${user} (host)` : user;
-    console.log(`\n${color(pc.bold(`[${label}]:`))}\n  ${text}`);
+    const labelColor = isHost ? pc.cyan : pc.magenta;
+    if (mode === "claude") {
+      console.log(`\n${pc.bold(labelColor(`[${label}]`))} ${pc.dim("\u2192 \u2726 Claude:")}`);
+    } else {
+      console.log(`\n${pc.bold(labelColor(`[${label}]:`))}`)
+    }
+    console.log(`  ${this.background ? pc.white(text) : text}`);
+  }
+
+  showClaudeThinking(): void {
+    console.log(this.sessionText("  \u2726 Claude is thinking..."));
+  }
+
+  showApprovalStatus(status: "pending" | "approved" | "rejected"): void {
+    switch (status) {
+      case "pending":
+        console.log(this.sessionText("  \u23f3 Waiting for host to approve..."));
+        break;
+      case "approved":
+        console.log(pc.green("  \u2705 Approved \u2014 Claude is working..."));
+        break;
+      case "rejected":
+        console.log(pc.red("  \u274c Host rejected your prompt"));
+        break;
+    }
+  }
+
+  showHint(text: string): void {
+    console.log(pc.gray(pc.italic(`  ${text}`)));
+  }
+
+  showSessionSummary(summary: { duration: string; messageCount: number; cost?: number }): void {
+    console.log("");
+    console.log(pc.bold("  \u2726 Session ended"));
+    console.log(this.sessionText(`  Duration: ${summary.duration}`));
+    console.log(this.sessionText(`  Messages: ${summary.messageCount}`));
+    if (summary.cost !== undefined && summary.cost > 0) {
+      console.log(this.sessionText(`  Cost: $${summary.cost.toFixed(4)}`));
+    }
+    console.log("");
   }
 
   showStreamChunk(text: string): void {
@@ -88,15 +140,15 @@ export class TerminalUI {
   }
 
   showToolUse(tool: string, _input: Record<string, unknown>): void {
-    console.log(pc.dim(`  [tool] ${tool}`));
+    console.log(this.sessionText(`  [tool] ${tool}`));
   }
 
   showToolResult(tool: string, output: string): void {
-    console.log(pc.dim(`  [result] ${tool}: ${output.slice(0, 100)}`));
+    console.log(this.sessionText(`  [result] ${tool}: ${output.slice(0, 100)}`));
   }
 
   showTurnComplete(cost: number, durationMs: number): void {
-    console.log(pc.dim(`\n  Turn complete: $${cost.toFixed(4)}, ${(durationMs / 1000).toFixed(1)}s`));
+    console.log(this.sessionText(`\n  Turn complete: $${cost.toFixed(4)}, ${(durationMs / 1000).toFixed(1)}s`));
   }
 
   showPartnerJoined(user: string): void {
@@ -108,12 +160,36 @@ export class TerminalUI {
   }
 
   showApprovalRequest(promptId: string, user: string, text: string): void {
-    console.log(pc.yellow(`\n  \u26A0 ${user} wants to send: "${text}"`));
-    console.log(pc.dim(`    (Approval handling via TUI \u2014 auto-approving for now)`));
-    // In a full implementation, this would show an interactive approval prompt
-    // For now, auto-approve
-    if (this.approvalHandler) {
-      this.approvalHandler(promptId, true);
+    console.log("");
+    console.log(pc.yellow(`  \u250c\u2500 ${user} \u2192 Claude ${"─".repeat(Math.max(0, 35 - user.length))}\u2510`));
+    console.log(pc.yellow(`  \u2502  "${text.length > 40 ? text.slice(0, 37) + "..." : text}"${" ".repeat(Math.max(0, 40 - Math.min(text.length, 40)))}\u2502`));
+    console.log(pc.yellow(`  \u2502  ${pc.bold("[y]")} approve  ${pc.bold("[n]")} reject${" ".repeat(22)}\u2502`));
+    console.log(pc.yellow(`  \u2514${"─".repeat(44)}\u2518`));
+
+    // Temporarily switch to raw mode for single keypress
+    if (process.stdin.isTTY) {
+      this.rl?.pause();
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+
+      const handler = (data: Buffer) => {
+        const key = data.toString().toLowerCase();
+        process.stdin.setRawMode(false);
+        process.stdin.removeListener("data", handler);
+        this.rl?.resume();
+
+        if (key === "y") {
+          console.log(pc.green("  \u2705 Approved"));
+          if (this.approvalHandler) this.approvalHandler(promptId, true);
+        } else {
+          console.log(pc.red("  \u274c Rejected"));
+          if (this.approvalHandler) this.approvalHandler(promptId, false);
+        }
+      };
+      process.stdin.on("data", handler);
+    } else {
+      // Non-TTY (e.g., piped input from test script) — auto-approve
+      if (this.approvalHandler) this.approvalHandler(promptId, true);
     }
   }
 

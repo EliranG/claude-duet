@@ -50,6 +50,12 @@ export class PromptRouter {
       text: msg.text,
       timestamp: Date.now(),
     });
+    this.server.broadcast({
+      type: "approval_status",
+      promptId: msg.id,
+      status: "pending",
+      timestamp: Date.now(),
+    } as any);
   }
 
   async handleApproval(response: { promptId: string; approved: boolean }): Promise<void> {
@@ -57,6 +63,13 @@ export class PromptRouter {
     if (!pending) return;
 
     this.pending.delete(response.promptId);
+
+    this.server.broadcast({
+      type: "approval_status",
+      promptId: response.promptId,
+      status: response.approved ? "approved" : "rejected",
+      timestamp: Date.now(),
+    } as any);
 
     if (response.approved) {
       await this.executePrompt(pending.msg, false);
