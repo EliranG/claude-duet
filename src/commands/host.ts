@@ -2,7 +2,7 @@ import { ClaudeDuetServer } from "../server.js";
 import { ClaudeBridge, type PermissionMode } from "../claude.js";
 import { PromptRouter } from "../router.js";
 import { TerminalUI } from "../ui.js";
-import { getLocalIP, formatConnectionInfo, startCloudflareTunnel, type ConnectionInfo } from "../connection.js";
+import { getLocalIP, formatConnectionInfo, startCloudflareTunnel, startLocaltunnel, type ConnectionInfo } from "../connection.js";
 import { SessionManager } from "../session.js";
 import { handleSlashCommand, type CommandContext } from "./session-commands.js";
 import { loadConfig } from "../config.js";
@@ -12,7 +12,7 @@ import { join } from "node:path";
 interface HostOptions {
   name: string;
   noApproval: boolean;
-  tunnel?: "cloudflare";
+  tunnel?: "localtunnel" | "cloudflare";
   relay?: string;
   port: number;
   continueSession?: boolean;
@@ -82,6 +82,17 @@ export async function hostCommand(options: HostOptions): Promise<void> {
       ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
     } catch (err) {
       ui.showError(String(err));
+      const localIP = getLocalIP();
+      connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
+    }
+  } else if (options.tunnel === "localtunnel") {
+    ui.showSystem("Starting localtunnel...");
+    const tunnelInfo = await startLocaltunnel(port);
+    if (tunnelInfo) {
+      connInfo = tunnelInfo;
+      ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
+    } else {
+      ui.showError("localtunnel failed — falling back to LAN.");
       const localIP = getLocalIP();
       connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
     }
