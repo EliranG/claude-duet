@@ -12,6 +12,7 @@ export interface PromptMessage extends BaseMessage {
   id: string;
   user: string;
   text: string;
+  source?: "host" | "guest";
 }
 
 export interface TypingMessage extends BaseMessage {
@@ -37,6 +38,7 @@ export interface ChatMessage extends BaseMessage {
   id: string;
   user: string;
   text: string;
+  source?: "host" | "guest";
 }
 
 // ---- Server → Client(s) ----

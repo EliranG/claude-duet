@@ -119,6 +119,7 @@ describe("integration: host + guest full flow", () => {
       id: "host-1",
       user: "eliran",
       text: "hello benji",
+      source: "host" as const,
       timestamp: Date.now(),
     };
     router.handlePrompt(msg);

@@ -27,6 +27,7 @@ describe("PromptRouter", () => {
       id: "1",
       user: "eliran",
       text: "fix the bug",
+      source: "host",
       timestamp: Date.now(),
     };
 
@@ -45,6 +46,7 @@ describe("PromptRouter", () => {
       id: "1",
       user: "benji",
       text: "delete everything",
+      source: "guest",
       timestamp: Date.now(),
     };
 
@@ -69,6 +71,7 @@ describe("PromptRouter", () => {
       id: "1",
       user: "benji",
       text: "fix the bug",
+      source: "guest",
       timestamp: Date.now(),
     };
 
@@ -88,6 +91,7 @@ describe("PromptRouter", () => {
       id: "prompt-1",
       user: "benji",
       text: "fix the bug",
+      source: "guest",
       timestamp: Date.now(),
     };
     await router.handlePrompt(msg);
@@ -108,11 +112,57 @@ describe("PromptRouter", () => {
       id: "prompt-1",
       user: "benji",
       text: "delete everything",
+      source: "guest",
       timestamp: Date.now(),
     };
     await router.handlePrompt(msg);
     await router.handleApproval({ promptId: "prompt-1", approved: false });
 
     expect(claude.sendPrompt).not.toHaveBeenCalled();
+  });
+
+  it("guest message with host username still requires approval when source is guest", async () => {
+    const claude = new ClaudeBridge();
+    const server = { broadcast: vi.fn(), on: vi.fn() } as any;
+
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: true });
+
+    const msg: PromptMessage = {
+      type: "prompt",
+      id: "spoof-1",
+      user: "eliran",
+      text: "rm -rf /",
+      source: "guest",
+      timestamp: Date.now(),
+    };
+
+    await router.handlePrompt(msg);
+
+    expect(claude.sendPrompt).not.toHaveBeenCalled();
+    expect(server.broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "approval_request" })
+    );
+  });
+
+  it("message without source field is treated as guest (requires approval)", async () => {
+    const claude = new ClaudeBridge();
+    const server = { broadcast: vi.fn(), on: vi.fn() } as any;
+
+    const router = new PromptRouter(claude, server, { hostUser: "eliran", approvalMode: true });
+
+    const msg: PromptMessage = {
+      type: "prompt",
+      id: "no-source-1",
+      user: "eliran",
+      text: "fix the bug",
+      timestamp: Date.now(),
+    };
+
+    await router.handlePrompt(msg);
+
+    expect(claude.sendPrompt).not.toHaveBeenCalled();
+    expect(server.broadcast).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "approval_request" })
+    );
   });
 });
