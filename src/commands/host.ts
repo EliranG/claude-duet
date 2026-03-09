@@ -31,6 +31,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
   const server = new ClaudeDuetServer({
     hostUser: options.name,
     password: session.password,
+    sessionCode: session.code,
     approvalMode,
   });
 
