@@ -105,13 +105,12 @@ describe("TerminalUI", () => {
     expect(writes.length).toBe(1);
   });
 
-  it("showWelcome includes a Slack-friendly share message", () => {
+  it("showWelcome shows instruction to share join command", () => {
     ui = new TerminalUI({ userName: "eliran", role: "host" });
     ui.showWelcome("cd-abc123", "secret", "ws://192.168.1.5:4567");
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
-    expect(output).toContain("claude-duet");
-    expect(output).toContain("Slack");
+    expect(output).toContain("Send your partner this command to join");
   });
 
   it("showUserPrompt with mode 'claude' shows Claude indicator", () => {

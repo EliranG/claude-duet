@@ -62,23 +62,31 @@ export class TerminalUI {
 
   showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
     this.applySessionBackground();
+
+    const violet = (s: string) => pc.magenta(s);
+    const dim = (s: string) => this.sessionText(s);
+    const bar = violet("  │");
+
     console.log("");
-    console.log(pc.bold(pc.cyan("  \u2726 claude-duet session started")));
-    console.log(`  Session code: ${pc.bold(sessionCode)}`);
-    console.log(`  Password: ${pc.bold(password)}`);
+    console.log(violet("  ┌─────────────────────────────────────────────┐"));
+    console.log(`${bar}  ${pc.bold(pc.cyan("✦"))} ${pc.bold(pc.white("claude-duet"))} ${dim("session started")}${" ".repeat(13)}${violet("│")}`);
+    console.log(violet("  └─────────────────────────────────────────────┘"));
+    console.log("");
+
     if (connectUrl) {
-      console.log(`  Connect URL: ${pc.bold(connectUrl)}`);
-      console.log("");
-      console.log(pc.bold("  Share this command with your partner:"));
-      console.log("");
       const joinCmd = `npx claude-duet join ${sessionCode} --password ${password} --url ${connectUrl}`;
-      console.log(`  ${pc.green(pc.bold(joinCmd))}`);
+      console.log(`  ${dim("Send your partner this command to join:")}`);
       console.log("");
-      console.log(this.sessionText("  Slack-friendly message (copy & share):"));
-      console.log(this.sessionText(`  Hey! Join my claude-duet session: \`${joinCmd}\``));
+      console.log(`  ${pc.green("▶")} ${pc.bold(pc.green(joinCmd))}`);
     } else {
-      console.log(`  Share these with your partner to join.`);
+      console.log(`  ${pc.cyan("●")} Session code  ${pc.bold(pc.white(sessionCode))}`);
+      console.log(`  ${pc.cyan("●")} Password      ${pc.bold(pc.white(password))}`);
+      console.log("");
+      console.log(`  ${dim("Share these with your partner to join.")}`);
     }
+
+    console.log("");
+    console.log(dim("  ─────────────────────────────────────────────"));
     console.log("");
     this.showInputPrompt();
   }
