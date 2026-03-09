@@ -21,7 +21,7 @@ Share your Claude Code session with a friend — real-time collaboration for AI 
 # You need Claude Code installed first
 npm install -g @anthropic-ai/claude-code
 
-# Start a duet session
+# Start a duet session (run from your terminal, NOT inside Claude Code)
 npx claude-duet host --name Alice
 
 # Your partner joins (copy the command from your terminal)
@@ -30,11 +30,23 @@ npx claude-duet join cd-a1b2c3d4 --password abc123 --url ws://192.168.1.5:4567
 
 Send the join command to your partner via Slack, Discord, whatever works.
 
+### Step by Step
+
+1. **Exit Claude Code** if you're in an active session (Ctrl+C or `/exit`)
+2. **Start a duet session** from your regular terminal:
+   - `npx claude-duet host` — fresh session
+   - `npx claude-duet host --continue` — resume your most recent Claude Code conversation
+3. **Share the join command** that appears in your terminal with your partner
+4. **Your partner runs** the join command from their own terminal
+5. **Chat freely** — plain text goes between you two, `@claude <prompt>` sends to Claude
+
+> **Context is preserved.** Because claude-duet wraps Claude Code in headless mode, your Claude Code conversation history carries over. Use `--continue` to pick up where you left off, and after the duet session ends, run `claude --continue` to keep going solo. Claude remembers everything — before, during, and after the duet.
+
 ## ✦ What Is This
 
-A shared terminal session where two people can **chat with each other** and **use Claude together**.
+A shared terminal session where two people can **chat with each other** and **invoke Claude together using `@claude <prompt>`**.
 
-Just type normally to talk to your partner. Type `@claude` to talk to Claude. Both of you see everything.
+Just type normally to talk to your partner. Prefix with **`@claude`** to send a prompt to Claude. Both of you see everything in real time.
 
 ```
 ⟩ hey, do you see the bug in auth.ts?          ← chat (just between you two)
@@ -128,6 +140,10 @@ npm test                # 124 tests across 17 files
 ```
 
 Requires Node.js 18+ and [Claude Code](https://claude.ai/code) CLI.
+
+## ❓ FAQ
+
+See the [FAQ](docs/faq.md) for common questions about security, remote access, permissions, and more.
 
 ## License
 
