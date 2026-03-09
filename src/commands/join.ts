@@ -57,15 +57,31 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
   client.on("message", (msg) => {
     switch (msg.type) {
+      case "history_replay": {
+        const replay = msg as any;
+        ui.showSystem(`Catching up on ${replay.messages.length} messages...`);
+        for (const histMsg of replay.messages) {
+          if (histMsg.role === "user") {
+            const isHostMsg = histMsg.user?.includes("(host)") || histMsg.user === result.hostUser;
+            ui.showUserPrompt(histMsg.user || "user", histMsg.text, isHostMsg ? "host" : "guest", "claude");
+          } else if (histMsg.role === "assistant") {
+            ui.showStreamChunk(histMsg.text);
+          } else if (histMsg.role === "tool") {
+            ui.showSystem(`  [${histMsg.toolName || "tool"}] ${histMsg.text.slice(0, 100)}`);
+          }
+        }
+        ui.showSystem("Caught up! You're live.");
+        break;
+      }
       case "chat_received":
         // Skip own chat messages (already shown locally)
         if ((msg as any).user === options.name) break;
-        ui.showUserPrompt((msg as any).user, (msg as any).text, false, "chat");
+        ui.showUserPrompt((msg as any).user, (msg as any).text, (msg as any).user === result.hostUser ? "host" : "guest", "chat");
         break;
       case "prompt_received":
         // Skip own messages (already shown locally when typed)
         if (msg.user === options.name) break;
-        ui.showUserPrompt(msg.user, msg.text, false, "claude");
+        ui.showUserPrompt(msg.user, msg.text, msg.user === result.hostUser ? "host" : "guest", "claude");
         break;
       case "approval_status":
         ui.showApprovalStatus((msg as any).status);
@@ -97,14 +113,14 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
     // Slash commands
     if (handleSlashCommand(text, cmdCtx)) return;
 
-    if (text.startsWith("@claude ")) {
+    if (text.toLowerCase().startsWith("@claude ")) {
       // Claude prompt — send to host via sendPrompt
       const prompt = text.slice(8);
-      ui.showUserPrompt(options.name, prompt, false, "claude");
+      ui.showUserPrompt(options.name, prompt, "guest", "claude");
       client.sendPrompt(prompt);
     } else {
       // Chat message
-      ui.showUserPrompt(options.name, text, false, "chat");
+      ui.showUserPrompt(options.name, text, "guest", "chat");
       client.sendChat(text);
     }
   });
@@ -117,9 +133,10 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
       duration: `${minutes}m ${seconds}s`,
       messageCount,
     });
-    ui.showError("Disconnected from session.");
+    ui.showSystem("The host has ended the session.");
+    ui.showHint("Tip: Resume this Claude Code session solo with: claude --continue");
     ui.close();
-    process.exit(1);
+    process.exit(0);
   });
 
   process.on("SIGINT", async () => {

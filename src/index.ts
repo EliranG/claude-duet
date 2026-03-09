@@ -12,7 +12,7 @@ const program = new Command();
 program
   .name("claude-duet")
   .description("Claude duet coding \u2014 share a Claude Code session with a partner")
-  .version("0.1.0");
+  .version("0.2.0");
 
 program
   .command("host")
@@ -22,6 +22,9 @@ program
   .option("--tunnel <provider>", "use a tunnel for remote access (cloudflare)")
   .option("--relay <url>", "use a relay server for remote access")
   .option("-p, --port <port>", "WebSocket server port", "0")
+  .option("-c, --continue", "resume most recent Claude Code session")
+  .option("--resume <id>", "resume a specific Claude Code session by ID")
+  .option("--permission-mode <mode>", "permission mode: auto (default) or interactive")
   .action((options) => {
     const config = loadConfig();
     hostCommand({
@@ -30,6 +33,9 @@ program
       tunnel: options.tunnel || config.tunnel,
       relay: options.relay || config.relay,
       port: parseInt(options.port, 10) || config.port || 0,
+      continueSession: options.continue || false,
+      resumeSession: options.resume,
+      permissionMode: options.permissionMode || config.permissionMode || "auto",
     });
   });
 

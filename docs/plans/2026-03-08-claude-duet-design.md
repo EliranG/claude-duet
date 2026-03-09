@@ -1,3 +1,5 @@
+> **Note:** This is the original v0.1 design document. The architecture was updated in v0.2 to wrap Claude Code in headless mode instead of using the Agent SDK directly. See [Headless Wrapper Architecture](2026-03-09-headless-wrapper-architecture.md) for the current design.
+
 # Claude-Duet Design Document
 
 ## Problem

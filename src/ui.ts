@@ -13,6 +13,9 @@ export class TerminalUI {
   private approvalHandler?: (promptId: string, approved: boolean) => void;
   private rl?: readline.Interface;
   private background?: SessionBackground;
+  private rawMode = false;
+  private lineBuffer = "";
+  private rawHandler?: (data: Buffer) => void;
 
   constructor(options: TerminalUIOptions) {
     this.options = options;
@@ -23,26 +26,175 @@ export class TerminalUI {
   }
 
   private showInputPrompt(): void {
-    if (this.background) {
-      process.stdout.write(pc.gray("⟩ "));
+    process.stdout.write(pc.gray("⟩ "));
+  }
+
+  private getSuggestions(): Array<{ trigger: string; completion: string; display: string }> {
+    const suggestions: Array<{ trigger: string; completion: string; display: string }> = [
+      { trigger: "@", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "@c", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "@cl", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "@cla", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "@clau", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "@claud", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "@claude", completion: "@claude ", display: "@claude <prompt>" },
+      { trigger: "/h", completion: "/help", display: "/help" },
+      { trigger: "/he", completion: "/help", display: "/help" },
+      { trigger: "/hel", completion: "/help", display: "/help" },
+      { trigger: "/s", completion: "/status", display: "/status" },
+      { trigger: "/st", completion: "/status", display: "/status" },
+      { trigger: "/sta", completion: "/status", display: "/status" },
+      { trigger: "/stat", completion: "/status", display: "/status" },
+      { trigger: "/statu", completion: "/status", display: "/status" },
+      { trigger: "/c", completion: "/clear", display: "/clear" },
+      { trigger: "/cl", completion: "/clear", display: "/clear" },
+      { trigger: "/cle", completion: "/clear", display: "/clear" },
+      { trigger: "/clea", completion: "/clear", display: "/clear" },
+      { trigger: "/l", completion: "/leave", display: "/leave" },
+      { trigger: "/le", completion: "/leave", display: "/leave" },
+      { trigger: "/lea", completion: "/leave", display: "/leave" },
+      { trigger: "/leav", completion: "/leave", display: "/leave" },
+    ];
+
+    if (this.options.role === "host") {
+      suggestions.push(
+        { trigger: "/t", completion: "/trust", display: "/trust" },
+        { trigger: "/tr", completion: "/trust", display: "/trust" },
+        { trigger: "/tru", completion: "/trust", display: "/trust" },
+        { trigger: "/trus", completion: "/trust", display: "/trust" },
+        { trigger: "/a", completion: "/approval", display: "/approval" },
+        { trigger: "/ap", completion: "/approval", display: "/approval" },
+        { trigger: "/app", completion: "/approval", display: "/approval" },
+        { trigger: "/appr", completion: "/approval", display: "/approval" },
+        { trigger: "/appro", completion: "/approval", display: "/approval" },
+        { trigger: "/approv", completion: "/approval", display: "/approval" },
+        { trigger: "/approva", completion: "/approval", display: "/approval" },
+        { trigger: "/k", completion: "/kick", display: "/kick" },
+        { trigger: "/ki", completion: "/kick", display: "/kick" },
+        { trigger: "/kic", completion: "/kick", display: "/kick" },
+      );
+    }
+
+    return suggestions;
+  }
+
+  private findSuggestion(input: string): { completion: string; ghost: string } | null {
+    if (!input) return null;
+    const lower = input.toLowerCase();
+    const match = this.getSuggestions().find((s) => s.trigger === lower);
+    if (!match) return null;
+    // Ghost text is the part not yet typed
+    const ghost = match.completion.slice(input.length);
+    if (!ghost) return null;
+    return { completion: match.completion, ghost };
+  }
+
+  private redrawLine(): void {
+    // Clear current line and rewrite
+    process.stdout.write(`\r\x1b[2K`);
+    process.stdout.write(pc.gray("⟩ "));
+    process.stdout.write(pc.white(this.lineBuffer));
+
+    // Show ghost suggestion
+    const suggestion = this.findSuggestion(this.lineBuffer);
+    if (suggestion) {
+      process.stdout.write(pc.dim(suggestion.ghost));
+      // Move cursor back to end of actual input
+      process.stdout.write(`\x1b[${suggestion.ghost.length}D`);
     }
   }
 
   startInputLoop(): void {
-    if (this.rl) return;
-    this.rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      prompt: "",
-    });
-    this.rl.on("line", (line) => {
-      const trimmed = line.trim();
-      if (trimmed && this.inputHandler) {
-        this.inputHandler(trimmed);
-      }
+    if (this.rawMode) return;
+
+    // Use raw mode for inline ghost suggestions if TTY
+    if (process.stdin.isTTY) {
+      this.rawMode = true;
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      process.stdin.setEncoding("utf8");
+
       this.showInputPrompt();
-    });
-    this.showInputPrompt();
+
+      this.rawHandler = (data: Buffer) => {
+        const str = data.toString();
+
+        for (let i = 0; i < str.length; i++) {
+          const ch = str[i];
+          const code = ch.charCodeAt(0);
+
+          // Ctrl+C
+          if (code === 3) {
+            process.emit("SIGINT" as any);
+            return;
+          }
+
+          // Enter
+          if (code === 13 || code === 10) {
+            process.stdout.write("\n");
+            const trimmed = this.lineBuffer.trim();
+            this.lineBuffer = "";
+            if (trimmed && this.inputHandler) {
+              this.inputHandler(trimmed);
+            }
+            this.showInputPrompt();
+            continue;
+          }
+
+          // Tab or Right arrow → accept suggestion
+          if (code === 9 || (code === 27 && str[i + 1] === "[" && str[i + 2] === "C")) {
+            const suggestion = this.findSuggestion(this.lineBuffer);
+            if (suggestion) {
+              this.lineBuffer = suggestion.completion;
+              this.redrawLine();
+            }
+            if (code === 27) i += 2; // skip escape sequence
+            continue;
+          }
+
+          // Backspace
+          if (code === 127 || code === 8) {
+            if (this.lineBuffer.length > 0) {
+              this.lineBuffer = this.lineBuffer.slice(0, -1);
+              this.redrawLine();
+            }
+            continue;
+          }
+
+          // Escape sequences (arrows etc.) — skip
+          if (code === 27) {
+            // Consume the rest of the escape sequence
+            if (str[i + 1] === "[") {
+              i += 2; // skip ESC [ X
+            }
+            continue;
+          }
+
+          // Regular printable character
+          if (code >= 32) {
+            this.lineBuffer += ch;
+            this.redrawLine();
+          }
+        }
+      };
+
+      process.stdin.on("data", this.rawHandler as any);
+    } else {
+      // Non-TTY fallback (piped input) — use readline
+      this.rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        prompt: "",
+      });
+      this.rl.on("line", (line) => {
+        const trimmed = line.trim();
+        if (trimmed && this.inputHandler) {
+          this.inputHandler(trimmed);
+        }
+        this.showInputPrompt();
+      });
+      this.showInputPrompt();
+    }
   }
 
   simulateInput(text: string): void {
@@ -99,9 +251,9 @@ export class TerminalUI {
     console.error(pc.red(`  Error: ${message}`));
   }
 
-  showUserPrompt(user: string, text: string, isHost: boolean, mode: "chat" | "claude" = "chat"): void {
-    const label = isHost ? `${user} (host)` : user;
-    const labelColor = isHost ? pc.cyan : pc.magenta;
+  showUserPrompt(user: string, text: string, role: "host" | "guest", mode: "chat" | "claude" = "chat"): void {
+    const label = role === "host" ? `${user} (host)` : user;
+    const labelColor = role === "host" ? pc.cyan : pc.yellow;
     if (mode === "claude") {
       console.log(`\n${pc.bold(labelColor(`[${label}]`))} ${pc.dim("\u2192 \u2726 Claude:")}`);
     } else {
@@ -174,17 +326,29 @@ export class TerminalUI {
     console.log(pc.yellow(`  \u2502  ${pc.bold("[y]")} approve  ${pc.bold("[n]")} reject${" ".repeat(22)}\u2502`));
     console.log(pc.yellow(`  \u2514${"─".repeat(44)}\u2518`));
 
-    // Temporarily switch to raw mode for single keypress
     if (process.stdin.isTTY) {
-      this.rl?.pause();
-      process.stdin.setRawMode(true);
-      process.stdin.resume();
+      // If we're in raw mode, temporarily detach the main input handler
+      // so the approval keypress handler can take over
+      if (this.rawMode && this.rawHandler) {
+        process.stdin.removeListener("data", this.rawHandler as any);
+      } else {
+        this.rl?.pause();
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+      }
 
       const handler = (data: Buffer) => {
         const key = data.toString().toLowerCase();
-        process.stdin.setRawMode(false);
         process.stdin.removeListener("data", handler);
-        this.rl?.resume();
+
+        if (this.rawMode && this.rawHandler) {
+          // Re-attach the main raw input handler
+          process.stdin.on("data", this.rawHandler as any);
+          this.showInputPrompt();
+        } else {
+          process.stdin.setRawMode(false);
+          this.rl?.resume();
+        }
 
         if (key === "y") {
           console.log(pc.green("  \u2705 Approved"));
@@ -210,6 +374,14 @@ export class TerminalUI {
   }
 
   close(): void {
+    if (this.rawMode && this.rawHandler) {
+      process.stdin.removeListener("data", this.rawHandler as any);
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      this.rawMode = false;
+      this.rawHandler = undefined;
+    }
     this.rl?.close();
     this.rl = undefined;
     if (this.background) {

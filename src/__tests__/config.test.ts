@@ -3,13 +3,13 @@ import { writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-// Test with real temp files
-describe("config", () => {
+// Test with real temp files — run sequentially to avoid cwd race conditions
+describe("config", { sequential: true }, () => {
   let tempDir: string;
   let originalCwd: string;
 
   beforeEach(() => {
-    tempDir = join(tmpdir(), `claude-duet-test-${Date.now()}`);
+    tempDir = join(tmpdir(), `claude-duet-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     mkdirSync(tempDir, { recursive: true });
     // Create a .git dir so project config detection works
     mkdirSync(join(tempDir, ".git"));
@@ -18,7 +18,7 @@ describe("config", () => {
   });
 
   afterEach(() => {
-    process.chdir(originalCwd);
+    try { process.chdir(originalCwd); } catch {}
     rmSync(tempDir, { recursive: true, force: true });
     vi.restoreAllMocks();
   });
@@ -77,6 +77,18 @@ describe("config", () => {
     expect(parseConfigValue("approvalMode", "false")).toBe(false);
     expect(parseConfigValue("port", "3000")).toBe(3000);
     expect(parseConfigValue("name", "eliran")).toBe("eliran");
+  });
+
+  it("isValidConfigKey accepts permissionMode", async () => {
+    const { isValidConfigKey } = await import("../config.js");
+    expect(isValidConfigKey("permissionMode")).toBe(true);
+  });
+
+  it("parseConfigValue handles permissionMode", async () => {
+    const { parseConfigValue } = await import("../config.js");
+    expect(parseConfigValue("permissionMode", "interactive")).toBe("interactive");
+    expect(parseConfigValue("permissionMode", "auto")).toBe("auto");
+    expect(parseConfigValue("permissionMode", "invalid")).toBe("auto");
   });
 
   it("loadConfig merges user and project (project wins)", async () => {

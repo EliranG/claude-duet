@@ -3,10 +3,12 @@
 # test-session.sh — Launch a claude-duet host + guest in two Terminal.app windows
 # with a scripted demo conversation using custom nicknames.
 #
+# Prerequisites: Claude Code CLI must be installed (npm install -g @anthropic-ai/claude-code)
+#
 # Usage: ./scripts/test-session.sh
 #
 # Opens two terminal windows side-by-side:
-#   Left:  claude-duet host ("Eliran")
+#   Left:  claude-duet host ("Eliran") — runs Claude Code in headless mode
 #   Right: claude-duet guest ("Benji")
 #
 # After both connect, a scripted demo conversation plays out automatically:
@@ -30,6 +32,15 @@ mkdir -p "$SESSION_DIR"
 echo "Building claude-duet..."
 cd "$REPO_DIR"
 npm run build --silent 2>&1
+
+# Check that Claude Code CLI is installed (required for v0.2+)
+if ! command -v claude &> /dev/null; then
+  echo ""
+  echo "  ERROR: Claude Code CLI is not installed."
+  echo "  Install it with: npm install -g @anthropic-ai/claude-code"
+  echo "  The test session requires Claude Code to run in headless mode."
+  exit 1
+fi
 
 echo "Preparing test session..."
 
@@ -194,7 +205,7 @@ echo "[orchestrator] Press Ctrl+C in either window to end the session."
 
 # Check for unexpected errors in host output (ignore SDK-related ones)
 if [ -f "$SESSION_DIR/host-output.log" ]; then
-  ERRORS=$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[?][0-9;]*[a-zA-Z]//g; s/\r//g' "$SESSION_DIR/host-output.log" | grep "Error:" | grep -v "claude-agent-sdk" | head -5 || true)
+  ERRORS=$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[?][0-9;]*[a-zA-Z]//g; s/\r//g' "$SESSION_DIR/host-output.log" | grep "Error:" | grep -v "Claude Code" | head -5 || true)
   if [ -n "$ERRORS" ]; then
     echo ""
     echo "[orchestrator] WARNING: Errors detected in host output:"
@@ -204,7 +215,7 @@ fi
 
 # Check for unexpected errors in guest output
 if [ -f "$SESSION_DIR/guest-output.log" ]; then
-  ERRORS=$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[?][0-9;]*[a-zA-Z]//g; s/\r//g' "$SESSION_DIR/guest-output.log" | grep "Error:" | grep -v "claude-agent-sdk" | head -5 || true)
+  ERRORS=$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g; s/\x1b\[[?][0-9;]*[a-zA-Z]//g; s/\r//g' "$SESSION_DIR/guest-output.log" | grep "Error:" | grep -v "Claude Code" | head -5 || true)
   if [ -n "$ERRORS" ]; then
     echo ""
     echo "[orchestrator] WARNING: Errors detected in guest output:"
