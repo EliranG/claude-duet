@@ -208,6 +208,7 @@ export async function hostCommand(options: HostOptions): Promise<void> {
         id: `host-${Date.now()}`,
         user: options.name,
         text: prompt,
+        source: "host" as const,
         timestamp: Date.now(),
       };
       ui.showUserPrompt(options.name, prompt, "host", "claude");

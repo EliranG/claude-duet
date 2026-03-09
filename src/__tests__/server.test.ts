@@ -92,6 +92,98 @@ describe("ClaudeDuetServer", () => {
     ws.close();
   });
 
+  it("overrides user field on guest prompt messages with stored guestUser", async () => {
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: TEST_PASSWORD, sessionCode: TEST_SESSION_CODE });
+    const port = await server.start();
+
+    const promptReceived = new Promise<Record<string, unknown>>((resolve) => {
+      server.on("prompt", (msg) => resolve(msg));
+    });
+
+    const ws = new WebSocket(`ws://localhost:${port}`);
+    await new Promise<void>((resolve) => ws.on("open", resolve));
+
+    ws.send(
+      encrypt(
+        JSON.stringify({
+          type: "join",
+          user: "benji",
+          passwordHash: TEST_PASSWORD,
+          timestamp: Date.now(),
+        }),
+        TEST_KEY,
+      ),
+    );
+
+    await new Promise<void>((resolve) => {
+      ws.on("message", () => resolve());
+    });
+
+    ws.send(
+      encrypt(
+        JSON.stringify({
+          type: "prompt",
+          id: "spoof-1",
+          user: "eliran",
+          text: "spoofed prompt",
+          timestamp: Date.now(),
+        }),
+        TEST_KEY,
+      ),
+    );
+
+    const msg = await promptReceived;
+    expect(msg.user).toBe("benji");
+    expect(msg.source).toBe("guest");
+    ws.close();
+  });
+
+  it("overrides user field on guest chat messages with stored guestUser", async () => {
+    server = new ClaudeDuetServer({ hostUser: "eliran", password: TEST_PASSWORD, sessionCode: TEST_SESSION_CODE });
+    const port = await server.start();
+
+    const chatReceived = new Promise<Record<string, unknown>>((resolve) => {
+      server.on("chat", (msg) => resolve(msg));
+    });
+
+    const ws = new WebSocket(`ws://localhost:${port}`);
+    await new Promise<void>((resolve) => ws.on("open", resolve));
+
+    ws.send(
+      encrypt(
+        JSON.stringify({
+          type: "join",
+          user: "benji",
+          passwordHash: TEST_PASSWORD,
+          timestamp: Date.now(),
+        }),
+        TEST_KEY,
+      ),
+    );
+
+    await new Promise<void>((resolve) => {
+      ws.on("message", () => resolve());
+    });
+
+    ws.send(
+      encrypt(
+        JSON.stringify({
+          type: "chat",
+          id: "chat-spoof-1",
+          user: "eliran",
+          text: "spoofed chat",
+          timestamp: Date.now(),
+        }),
+        TEST_KEY,
+      ),
+    );
+
+    const msg = await chatReceived;
+    expect(msg.user).toBe("benji");
+    expect(msg.source).toBe("guest");
+    ws.close();
+  });
+
   it("sends encrypted messages on the wire (not plaintext JSON)", async () => {
     server = new ClaudeDuetServer({ hostUser: "eliran", password: TEST_PASSWORD, sessionCode: TEST_SESSION_CODE });
     const port = await server.start();

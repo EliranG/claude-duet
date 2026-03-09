@@ -100,6 +100,8 @@ export class ClaudeDuetServer extends EventEmitter {
     }
 
     if (isPromptMessage(msg)) {
+      msg.user = this.guestUser!;
+      msg.source = "guest";
       this.emit("prompt", msg);
       return;
     }
@@ -110,6 +112,8 @@ export class ClaudeDuetServer extends EventEmitter {
     }
 
     if (isChatMessage(msg)) {
+      msg.user = this.guestUser!;
+      msg.source = "guest";
       this.broadcast({
         type: "chat_received",
         user: msg.user,
