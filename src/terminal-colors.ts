@@ -4,15 +4,14 @@ export interface SessionBackground {
   textColor: "white" | "black";
 }
 
+// Colors matched to the social banner gradient: deep indigo/navy with subtle violet
 const BACKGROUNDS: SessionBackground[] = [
-  { name: "deep-purple", apply: "\x1b[48;2;30;20;60m", textColor: "white" },
-  { name: "midnight-blue", apply: "\x1b[48;2;15;25;55m", textColor: "white" },
-  { name: "dark-teal", apply: "\x1b[48;2;10;40;45m", textColor: "white" },
-  { name: "deep-green", apply: "\x1b[48;2;15;35;25m", textColor: "white" },
-  { name: "dark-plum", apply: "\x1b[48;2;45;20;45m", textColor: "white" },
-  { name: "navy", apply: "\x1b[48;2;10;15;45m", textColor: "white" },
-  { name: "dark-maroon", apply: "\x1b[48;2;45;15;20m", textColor: "white" },
-  { name: "charcoal-violet", apply: "\x1b[48;2;35;25;50m", textColor: "white" },
+  { name: "void",           apply: "\x1b[48;2;6;6;15m",   textColor: "white" },   // #06060f
+  { name: "deep-indigo",    apply: "\x1b[48;2;14;14;36m", textColor: "white" },   // #0e0e24
+  { name: "midnight-violet", apply: "\x1b[48;2;20;14;48m", textColor: "white" },  // #140e30
+  { name: "dark-navy",      apply: "\x1b[48;2;10;10;28m", textColor: "white" },   // #0a0a1c
+  { name: "indigo-black",   apply: "\x1b[48;2;12;10;30m", textColor: "white" },   // #0c0a1e
+  { name: "deep-space",     apply: "\x1b[48;2;8;8;22m",   textColor: "white" },   // #080816
 ];
 
 export function pickSessionBackground(): SessionBackground {
