@@ -7,8 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/claude-duet)](https://www.npmjs.com/package/claude-duet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Vibe code with a friend — share your Claude Code session in real-time.
-Chat with each other, summon Claude together, ship faster.
+Share your Claude Code session with a friend — real-time collaboration for AI pair programming.
 
 <img src="docs/assets/demo.gif" alt="claude-duet demo" width="700">
 
@@ -16,36 +15,63 @@ Chat with each other, summon Claude together, ship faster.
 
 ---
 
-> ✦ Currently vibing with [Claude Code](https://claude.ai/code) (Anthropic's CLI).
-> More AI coding tools coming soon.
+> ✦ Wraps [Claude Code](https://claude.ai/code) (Anthropic's CLI) in headless mode.
+> Your existing session, shared live.
 
 ## ⚡ 30-Second Setup
 
 ```bash
-# You host it
-npx claude-duet host
+# Prerequisites: Claude Code must be installed
+npm install -g @anthropic-ai/claude-code
+
+# You're in a Claude Code session, stuck on a bug. Exit and share:
+claude-duet host --continue
 
 # Your partner joins (copy the command from your terminal)
-npx claude-duet join cd-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
+claude-duet join cd-a1b2c3d4 --password mypassword --url ws://192.168.1.5:4567
 ```
 
 That's it. Send the join command via Slack, Discord, carrier pigeon — whatever works. ✌︎
 
-## ✦ The Vibes
+## ✦ The Core Idea
+
+You're deep in a Claude Code session, stuck on something. You want a friend to jump in and help — see what you've been working on, brainstorm together, both talk to Claude.
 
 ```
-┌──────────────┐     WebSocket      ┌──────────────┐
-│   You        │◄══════════════════►│   Partner    │
-│   Claude Code│    E2E encrypted   │   Terminal   │
-│   + Server   │                    │   Client     │
-└──────────────┘                    └──────────────┘
+# Alice is stuck in a Claude Code session
+alice$ ctrl+c                       # exit Claude Code
+alice$ claude-duet host --continue  # share the session
+
+# Bob joins from his terminal
+bob$ claude-duet join cd-a1b2c3d4 --password abc123
+
+  ✦ Catching up on 47 messages...
+  [alice]: Fix the auth bug in middleware.ts
+  [claude]: I see the issue in the JWT validation...
+  ...
+  ✦ You're live! Approval mode is ON.
+
+# After the duet — Alice goes back to solo:
+alice$ claude --continue            # Claude remembers EVERYTHING
 ```
 
-1. **You** host — Claude runs on your machine
-2. **Partner** connects — types prompts, sees everything live
+## ☯︎ How It Works
+
+```
+┌──────────────────┐     WebSocket      ┌──────────────────┐
+│   You (host)     │◄══════════════════►│   Partner        │
+│   Claude Code    │    E2E encrypted   │   Terminal       │
+│   (headless)     │                    │   Client         │
+│   + WS Server    │                    │                  │
+└──────────────────┘                    └──────────────────┘
+```
+
+1. **You** host — Claude Code runs on your machine in headless mode
+2. **Partner** connects — sees your session history, types prompts, sees everything live
 3. **Chat freely** — regular messages stay between you two
 4. **Summon Claude** — prefix with `@claude` and it goes to the AI
 5. **Stay in control** — approve or reject partner's Claude prompts with a single keypress
+6. **Continue solo** — exit duet, `claude --continue`, Claude remembers the duet
 
 ## ☯︎ Chat vs Claude
 
@@ -73,13 +99,18 @@ This is the core idea — you can **talk to each other** without bugging Claude,
 | `/status` | Session info — who's connected, duration |
 | `/leave` | Graceful exit with session summary |
 
+Type `@` and see inline ghost suggestions — press **Tab** or **Right arrow** to accept. Works for all commands (`/help`, `/status`, `/leave`, `/trust`, etc.).
+
 ## ⌘ Commands
 
 ### CLI
 
 ```bash
 npx claude-duet                          # Interactive wizard
-npx claude-duet host                     # Host on LAN (default)
+npx claude-duet host                     # Host — fresh session
+npx claude-duet host --continue          # Host — resume most recent Claude Code session
+npx claude-duet host --resume <id>       # Host — resume specific session
+npx claude-duet host --permission-mode interactive  # You approve each tool use
 npx claude-duet host --no-approval       # Trust mode — no prompt review
 npx claude-duet host --tunnel cloudflare # Host via Cloudflare tunnel
 npx claude-duet relay                    # Run a relay server
@@ -109,6 +140,9 @@ claude-duet config set name "Eliran"
 # Set project-specific settings
 claude-duet config set approvalMode false --project
 
+# Set permission mode
+claude-duet config set permissionMode interactive
+
 # See what's configured
 claude-duet config
 
@@ -122,6 +156,13 @@ claude-duet config path
 | Project | `.claude-duet.json` | This repo only |
 
 Project overrides user. CLI flags override everything.
+
+| Key | Values | Default |
+|-----|--------|---------|
+| `name` | any string | system username |
+| `approvalMode` | `true` / `false` | `true` |
+| `permissionMode` | `auto` / `interactive` | `auto` |
+| `port` | number | random |
 
 ## ☷ Connection Modes
 
@@ -138,6 +179,7 @@ Not an afterthought.
 
 - **E2E Encrypted** — NaCl secretbox (XSalsa20-Poly1305) + scrypt key derivation
 - **Approval Mode** — you review every partner prompt before it touches Claude (default: on)
+- **Permission Modes** — `auto` lets Claude use tools freely; `interactive` requires your approval for each tool use
 - **No Third-Party Relay** — LAN direct by default. Your data stays on your network
 - **Host Controls Everything** — Claude runs on your machine, your API key, your filesystem
 
@@ -156,9 +198,14 @@ git clone https://github.com/elirang/claude-duet.git
 cd claude-duet
 npm install
 npm run build
-npm test                # 92 tests across 15 files
+npm test                # 124 tests across 17 files
 npm run test:session    # Live demo with two Terminal windows
 ```
+
+## Prerequisites
+
+- Node.js 18+
+- [Claude Code](https://claude.ai/code) CLI installed (`npm install -g @anthropic-ai/claude-code`)
 
 ## License
 
