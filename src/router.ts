@@ -25,7 +25,7 @@ export class PromptRouter {
   }
 
   async handlePrompt(msg: PromptMessage): Promise<void> {
-    const isHost = msg.user === this.options.hostUser;
+    const isHost = msg.source === "host";
 
     // Broadcast that prompt was received
     this.server.broadcast({

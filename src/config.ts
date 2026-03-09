@@ -6,7 +6,7 @@ export interface ClaudeDuetConfig {
   name?: string;
   approvalMode?: boolean;
   port?: number;
-  tunnel?: "cloudflare";
+  tunnel?: "localtunnel" | "cloudflare";
   relay?: string;
   permissionMode?: "auto" | "interactive";
 }

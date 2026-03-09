@@ -19,7 +19,7 @@ program
   .description("Start a claude-duet session as host")
   .option("-n, --name <name>", "your display name", process.env.USER || "host")
   .option("--no-approval", "disable approval mode (trust your partner)")
-  .option("--tunnel <provider>", "use a tunnel for remote access (cloudflare)")
+  .option("--tunnel [provider]", "use a tunnel for remote access (localtunnel, cloudflare)")
   .option("--relay <url>", "use a relay server for remote access")
   .option("-p, --port <port>", "WebSocket server port", "0")
   .option("-c, --continue", "resume most recent Claude Code session")
@@ -27,10 +27,12 @@ program
   .option("--permission-mode <mode>", "permission mode: auto (default) or interactive")
   .action((options) => {
     const config = loadConfig();
+    const tunnelFlag = options.tunnel === true ? "localtunnel" : options.tunnel;
+    const tunnel = tunnelFlag || config.tunnel;
     hostCommand({
       name: options.name !== process.env.USER ? options.name : (config.name || options.name),
       noApproval: !options.approval || config.approvalMode === false,
-      tunnel: options.tunnel || config.tunnel,
+      tunnel,
       relay: options.relay || config.relay,
       port: parseInt(options.port, 10) || config.port || 0,
       continueSession: options.continue || false,
