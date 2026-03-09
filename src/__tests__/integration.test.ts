@@ -5,6 +5,9 @@ import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
 import { TerminalUI } from "../ui.js";
 
+const TEST_PASSWORD = "test1234";
+const TEST_SESSION_CODE = "cd-test1234";
+
 describe("integration: host + guest full flow", () => {
   let server: ClaudeDuetServer;
   let client: ClaudeDuetClient;
@@ -24,10 +27,10 @@ describe("integration: host + guest full flow", () => {
   });
 
   it("guest connects, sends prompt, host approves, Claude responds", async () => {
-    // Setup host
     server = new ClaudeDuetServer({
       hostUser: "eliran",
-      password: "test1234",
+      password: TEST_PASSWORD,
+      sessionCode: TEST_SESSION_CODE,
       approvalMode: true,
     });
     const port = await server.start();
@@ -38,47 +41,39 @@ describe("integration: host + guest full flow", () => {
       approvalMode: true,
     });
 
-    // Wire server events to router
     server.on("prompt", (msg) => router.handlePrompt(msg));
 
-    // Track approval requests emitted locally via broadcast
-    const approvalRequests: any[] = [];
+    const approvalRequests: Record<string, unknown>[] = [];
     server.on("server_message", (msg) => {
       if (msg.type === "approval_request") {
         approvalRequests.push(msg);
       }
     });
 
-    // Guest connects
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", TEST_PASSWORD, TEST_SESSION_CODE);
 
-    // Guest sends prompt
     client.sendPrompt("fix the bug");
     await new Promise((r) => setTimeout(r, 100));
 
-    // Verify approval was requested
     expect(approvalRequests).toHaveLength(1);
     expect(approvalRequests[0].user).toBe("benji");
     expect(approvalRequests[0].text).toBe("fix the bug");
 
-    // Host approves — mock sendPrompt to avoid real SDK call
     const sendPromptSpy = vi
       .spyOn(claude, "sendPrompt")
       .mockReturnValue(undefined);
     await router.handleApproval({
-      promptId: approvalRequests[0].promptId,
+      promptId: approvalRequests[0].promptId as string,
       approved: true,
     });
 
-    // Verify Claude was called
     expect(sendPromptSpy).toHaveBeenCalledWith("benji", "fix the bug", {
       isHost: false,
     });
   });
 
   it("host can type messages via TerminalUI simulateInput", async () => {
-    // Test the UI → handler → claude wiring pattern (no real server needed)
     const claude = new ClaudeBridge();
     const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockReturnValue(undefined);
 
@@ -89,7 +84,6 @@ describe("integration: host + guest full flow", () => {
       claude.sendPrompt("eliran", text, { isHost: true });
     });
 
-    // Simulate typing via the test helper
     ui.simulateInput("fix the tests");
     await new Promise((r) => setTimeout(r, 50));
 
@@ -99,7 +93,8 @@ describe("integration: host + guest full flow", () => {
   it("host prompt is broadcast to guest exactly once", async () => {
     server = new ClaudeDuetServer({
       hostUser: "eliran",
-      password: "test1234",
+      password: TEST_PASSWORD,
+      sessionCode: TEST_SESSION_CODE,
     });
     const port = await server.start();
 
@@ -112,14 +107,13 @@ describe("integration: host + guest full flow", () => {
     });
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", TEST_PASSWORD, TEST_SESSION_CODE);
 
-    const received: any[] = [];
+    const received: Record<string, unknown>[] = [];
     client.on("message", (msg) => {
       if (msg.type === "prompt_received") received.push(msg);
     });
 
-    // Simulate host typing — only router.handlePrompt (not a second broadcast)
     const msg = {
       type: "prompt" as const,
       id: "host-1",
@@ -130,7 +124,6 @@ describe("integration: host + guest full flow", () => {
     router.handlePrompt(msg);
     await new Promise((r) => setTimeout(r, 200));
 
-    // Should receive EXACTLY one prompt_received, not two
     expect(received).toHaveLength(1);
     expect(received[0].user).toBe("eliran");
     expect(received[0].text).toBe("hello benji");
@@ -139,7 +132,8 @@ describe("integration: host + guest full flow", () => {
   it("chat messages are not sent to Claude", async () => {
     server = new ClaudeDuetServer({
       hostUser: "eliran",
-      password: "test1234",
+      password: TEST_PASSWORD,
+      sessionCode: TEST_SESSION_CODE,
     });
     const port = await server.start();
 
@@ -147,30 +141,28 @@ describe("integration: host + guest full flow", () => {
     const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockReturnValue(undefined);
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", TEST_PASSWORD, TEST_SESSION_CODE);
 
-    // Guest sends a chat (not a prompt)
     client.sendChat("just chatting");
     await new Promise((r) => setTimeout(r, 100));
 
-    // Claude should NOT have been called
     expect(sendPromptSpy).not.toHaveBeenCalled();
   });
 
   it("guest receives streamed responses", async () => {
     server = new ClaudeDuetServer({
       hostUser: "eliran",
-      password: "test1234",
+      password: TEST_PASSWORD,
+      sessionCode: TEST_SESSION_CODE,
     });
     const port = await server.start();
 
     client = new ClaudeDuetClient();
-    await client.connect(`ws://localhost:${port}`, "benji", "test1234");
+    await client.connect(`ws://localhost:${port}`, "benji", TEST_PASSWORD, TEST_SESSION_CODE);
 
-    const messages: any[] = [];
+    const messages: Record<string, unknown>[] = [];
     client.on("message", (msg) => messages.push(msg));
 
-    // Simulate Claude streaming via server broadcast
     server.broadcast({
       type: "stream_chunk",
       text: "Here ",

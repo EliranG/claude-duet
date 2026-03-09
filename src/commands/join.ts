@@ -19,7 +19,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
   let result: Awaited<ReturnType<typeof client.connect>>;
 
   try {
-    result = await client.connect(serverUrl, options.name, options.password);
+    result = await client.connect(serverUrl, options.name, options.password, sessionCode);
     ui.applySessionBackground();
     ui.showSystem(`Connected! You're in a duet session with ${result.hostUser}.`);
     if (result.approvalMode) {
