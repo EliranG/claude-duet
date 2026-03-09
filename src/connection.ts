@@ -1,5 +1,6 @@
 import { networkInterfaces } from "node:os";
 import { spawn, type ChildProcess } from "node:child_process";
+import localtunnel from "localtunnel";
 
 export function getLocalIP(): string {
   const nets = networkInterfaces();
@@ -75,4 +76,27 @@ export async function startCloudflareTunnel(localPort: number): Promise<Connecti
       );
     });
   });
+}
+
+export async function startLocaltunnel(localPort: number): Promise<ConnectionInfo | null> {
+  try {
+    const tunnel = await Promise.race([
+      localtunnel({ port: localPort }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("localtunnel timed out after 30s")), 30000),
+      ),
+    ]);
+
+    const httpsUrl = tunnel.url;
+    const wssUrl = httpsUrl.replace("https://", "wss://");
+
+    return {
+      url: wssUrl,
+      displayUrl: wssUrl,
+      mode: "tunnel",
+      cleanup: () => tunnel.close(),
+    };
+  } catch {
+    return null;
+  }
 }

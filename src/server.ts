@@ -7,10 +7,12 @@ import {
   isApprovalResponse,
   isChatMessage,
 } from "./protocol.js";
+import { deriveKey, encrypt, decrypt } from "./crypto.js";
 
 export interface ServerOptions {
   hostUser: string;
   password: string;
+  sessionCode: string;
   approvalMode?: boolean;
 }
 
@@ -19,6 +21,7 @@ export class ClaudeDuetServer extends EventEmitter {
   private guest?: WebSocket;
   private guestUser?: string;
   private options: Required<ServerOptions>;
+  private encryptionKey: Uint8Array;
 
   constructor(options: ServerOptions) {
     super();
@@ -26,6 +29,7 @@ export class ClaudeDuetServer extends EventEmitter {
       approvalMode: true,
       ...options,
     };
+    this.encryptionKey = deriveKey(options.password, options.sessionCode);
   }
 
   async start(port = 0): Promise<number> {
@@ -43,23 +47,23 @@ export class ClaudeDuetServer extends EventEmitter {
   private handleConnection(ws: WebSocket): void {
     // Only allow one guest
     if (this.guest) {
-      ws.send(
-        JSON.stringify({
-          type: "join_rejected",
-          reason: "Session is full",
-          timestamp: Date.now(),
-        } satisfies ServerMessage),
-      );
+      const payload: ServerMessage = {
+        type: "join_rejected",
+        reason: "Session is full",
+        timestamp: Date.now(),
+      };
+      ws.send(encrypt(JSON.stringify(payload), this.encryptionKey));
       ws.close();
       return;
     }
 
     ws.on("message", (data) => {
       try {
-        const msg: unknown = JSON.parse(data.toString());
+        const decrypted = decrypt(data.toString(), this.encryptionKey);
+        const msg: unknown = JSON.parse(decrypted);
         this.handleMessage(ws, msg);
       } catch {
-        // Ignore malformed messages
+        // Ignore malformed or undecryptable messages
       }
     });
 
@@ -96,6 +100,8 @@ export class ClaudeDuetServer extends EventEmitter {
     }
 
     if (isPromptMessage(msg)) {
+      msg.user = this.guestUser!;
+      msg.source = "guest";
       this.emit("prompt", msg);
       return;
     }
@@ -106,6 +112,8 @@ export class ClaudeDuetServer extends EventEmitter {
     }
 
     if (isChatMessage(msg)) {
+      msg.user = this.guestUser!;
+      msg.source = "guest";
       this.broadcast({
         type: "chat_received",
         user: msg.user,
@@ -118,9 +126,9 @@ export class ClaudeDuetServer extends EventEmitter {
   }
 
   broadcast(msg: ServerMessage): void {
-    const data = JSON.stringify(msg);
     if (this.guest?.readyState === WebSocket.OPEN) {
-      this.guest.send(data);
+      const encrypted = encrypt(JSON.stringify(msg), this.encryptionKey);
+      this.guest.send(encrypted);
     }
     // Also emit locally for host TUI
     this.emit("server_message", msg);
@@ -128,7 +136,8 @@ export class ClaudeDuetServer extends EventEmitter {
 
   private send(ws: WebSocket, msg: ServerMessage): void {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
+      const encrypted = encrypt(JSON.stringify(msg), this.encryptionKey);
+      ws.send(encrypted);
     }
   }
 
