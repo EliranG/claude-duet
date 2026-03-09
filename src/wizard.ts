@@ -9,6 +9,8 @@ export interface WizardResult {
   trustMode?: "approval" | "trusted";
   port?: number;
   relayUrl?: string;
+  permissionMode?: "auto" | "interactive";
+  resumeSession?: "continue" | "fresh";
   // Join options
   sessionCode?: string;
   password?: string;
@@ -18,7 +20,7 @@ export interface WizardResult {
 }
 
 export async function runWizard(): Promise<WizardResult | null> {
-  p.intro(`${pc.bgCyan(pc.black(" claude-duet "))} ${pc.dim("v0.1.0")}`);
+  p.intro(`${pc.bgCyan(pc.black(" claude-duet "))} ${pc.dim("v0.2.0")}`);
 
   const mode = await p.select({
     message: "What would you like to do?",
@@ -45,6 +47,16 @@ export async function runWizard(): Promise<WizardResult | null> {
 }
 
 async function runHostWizard(name: string): Promise<WizardResult | null> {
+  const resumeSession = await p.select({
+    message: "Claude Code session?",
+    options: [
+      { value: "continue", label: "Resume most recent session", hint: "continue where you left off" },
+      { value: "fresh", label: "Start a fresh session", hint: "new conversation" },
+    ],
+  }) as "continue" | "fresh";
+
+  if (p.isCancel(resumeSession)) { p.cancel("Cancelled."); return null; }
+
   const connectionType = await p.select({
     message: "How will your partner connect?",
     options: [
@@ -76,7 +88,17 @@ async function runHostWizard(name: string): Promise<WizardResult | null> {
 
   if (p.isCancel(trustMode)) { p.cancel("Cancelled."); return null; }
 
-  return { mode: "host", name, connectionType, trustMode, relayUrl };
+  const permissionMode = await p.select({
+    message: "Tool permission mode?",
+    options: [
+      { value: "auto", label: "Auto-approve", hint: "Claude runs tools freely (default, recommended)" },
+      { value: "interactive", label: "Interactive", hint: "you approve each tool use (like normal Claude Code)" },
+    ],
+  }) as "auto" | "interactive";
+
+  if (p.isCancel(permissionMode)) { p.cancel("Cancelled."); return null; }
+
+  return { mode: "host", name, connectionType, trustMode, relayUrl, permissionMode, resumeSession };
 }
 
 async function runJoinWizard(name: string): Promise<WizardResult | null> {

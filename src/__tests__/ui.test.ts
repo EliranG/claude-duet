@@ -41,7 +41,7 @@ describe("TerminalUI", () => {
 
   it("showUserPrompt displays formatted message", () => {
     ui = new TerminalUI({ userName: "benji", role: "guest" });
-    ui.showUserPrompt("benji", "hello world", false);
+    ui.showUserPrompt("benji", "hello world", "guest");
     expect(console.log).toHaveBeenCalled();
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
@@ -115,7 +115,7 @@ describe("TerminalUI", () => {
 
   it("showUserPrompt with mode 'claude' shows Claude indicator", () => {
     ui = new TerminalUI({ userName: "benji", role: "guest" });
-    ui.showUserPrompt("benji", "fix the bug", false, "claude");
+    ui.showUserPrompt("benji", "fix the bug", "guest", "claude");
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
     expect(output).toContain("benji");

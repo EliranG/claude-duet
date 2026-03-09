@@ -9,7 +9,7 @@ vi.mock("../claude.js", () => ({
   ClaudeBridge: vi.fn().mockImplementation(() => ({
     on: vi.fn(),
     emit: vi.fn(),
-    sendPrompt: vi.fn().mockResolvedValue(undefined),
+    sendPrompt: vi.fn().mockReturnValue(undefined),
     formatPrompt: vi.fn((user: string, text: string) => `[${user}]: ${text}`),
     isBusy: vi.fn().mockReturnValue(false),
   })),

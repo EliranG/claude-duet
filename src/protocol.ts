@@ -117,6 +117,22 @@ export interface ApprovalStatusMessage extends BaseMessage {
   status: "pending" | "approved" | "rejected";
 }
 
+export interface HistoryMessage {
+  role: "user" | "assistant" | "tool";
+  user?: string;
+  text: string;
+  toolName?: string;
+  cost?: number;
+  timestamp: number;
+}
+
+export interface HistoryReplayMessage extends BaseMessage {
+  type: "history_replay";
+  messages: HistoryMessage[];
+  sessionId: string;
+  resumedFrom: number;
+}
+
 // ---- Union Types ----
 
 export type ClientMessage =
@@ -139,7 +155,8 @@ export type ServerMessage =
   | PresenceMessage
   | NoticeMessage
   | ErrorMessage
-  | ChatReceived;
+  | ChatReceived
+  | HistoryReplayMessage;
 
 export type Message = ClientMessage | ServerMessage;
 
@@ -171,6 +188,10 @@ export function isJoinRequest(msg: unknown): msg is JoinRequest {
 
 export function isChatMessage(msg: unknown): msg is ChatMessage {
   return isObject(msg) && msg.type === "chat";
+}
+
+export function isHistoryReplay(msg: unknown): msg is HistoryReplayMessage {
+  return isObject(msg) && msg.type === "history_replay";
 }
 
 function isObject(val: unknown): val is Record<string, unknown> {

@@ -8,9 +8,10 @@ export interface ClaudeDuetConfig {
   port?: number;
   tunnel?: "cloudflare";
   relay?: string;
+  permissionMode?: "auto" | "interactive";
 }
 
-const CONFIG_KEYS: (keyof ClaudeDuetConfig)[] = ["name", "approvalMode", "port", "tunnel", "relay"];
+const CONFIG_KEYS: (keyof ClaudeDuetConfig)[] = ["name", "approvalMode", "port", "tunnel", "relay", "permissionMode"];
 
 export function getUserConfigPath(): string {
   return join(homedir(), ".config", "claude-duet", "config.json");
@@ -95,6 +96,8 @@ export function parseConfigValue(key: keyof ClaudeDuetConfig, value: string): un
       return value === "true" || value === "1";
     case "port":
       return parseInt(value, 10);
+    case "permissionMode":
+      return value === "interactive" ? "interactive" : "auto";
     default:
       return value;
   }
