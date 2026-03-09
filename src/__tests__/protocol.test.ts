@@ -4,6 +4,7 @@ import {
   isStreamChunk,
   isApprovalRequest,
   isPresenceMessage,
+  isHistoryReplay,
   type PromptMessage,
   type StreamChunk,
 } from "../protocol.js";
@@ -49,5 +50,17 @@ describe("protocol type guards", () => {
       timestamp: Date.now(),
     };
     expect(isPresenceMessage(msg)).toBe(true);
+  });
+
+  it("identifies a history replay message", () => {
+    const msg = {
+      type: "history_replay",
+      messages: [{ role: "user", text: "fix bug", timestamp: Date.now() }],
+      sessionId: "abc-123",
+      resumedFrom: 5,
+      timestamp: Date.now(),
+    };
+    expect(isHistoryReplay(msg)).toBe(true);
+    expect(isPromptMessage(msg)).toBe(false);
   });
 });

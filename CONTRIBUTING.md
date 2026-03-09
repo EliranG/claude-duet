@@ -39,27 +39,32 @@ The test suite uses Vitest. Tests live in `src/__tests__/` alongside the source 
 
 ```
 src/
-  index.ts          # CLI entry point (commander)
-  wizard.ts         # Interactive setup wizard (@clack/prompts)
-  server.ts         # WebSocket server (host side)
-  client.ts         # WebSocket client (joiner side)
-  crypto.ts         # E2E encryption (tweetnacl)
-  protocol.ts       # Message protocol types and helpers
-  session.ts        # Session state management
-  connection.ts     # Connection mode handling
-  router.ts         # Message routing between host/guest/Claude
-  claude.ts         # Claude Agent SDK integration
-  lifecycle.ts      # Session lifecycle (start, end, summary)
-  relay-server.ts   # Relay server for remote connections
+  index.ts            # CLI entry point (commander)
+  wizard.ts           # Interactive setup wizard (@clack/prompts)
+  ui.ts               # Terminal UI (raw mode input, ghost suggestions)
+  terminal-colors.ts  # Session background colors
+  server.ts           # WebSocket server (host side)
+  client.ts           # WebSocket client (joiner side)
+  crypto.ts           # E2E encryption (tweetnacl)
+  protocol.ts         # Message protocol types and helpers
+  session.ts          # Session state management
+  connection.ts       # Connection mode handling
+  config.ts           # Configuration management (user + project)
+  router.ts           # Message routing between host/guest/Claude
+  claude.ts           # Claude Code headless wrapper (child process)
+  permissions.ts      # Permission server for interactive mode
+  history.ts          # Session history reader (JSONL parsing)
+  lifecycle.ts        # Session lifecycle (start, end, summary)
+  relay-server.ts     # Relay server for remote connections
   commands/
-    host.ts         # Host command implementation
-    join.ts         # Join command implementation
-  ui/
-    App.tsx         # Root Ink component
-    ChatView.tsx    # Chat message display
-    StatusBar.tsx   # Session status bar
-  __tests__/        # Test files
+    host.ts           # Host command implementation
+    join.ts           # Join command implementation
+    config.ts         # Config command implementation
+    session-commands.ts  # In-session slash commands
+  __tests__/          # 124 tests across 17 files
 ```
+
+> **Prerequisites:** Claude Code CLI must be installed for integration testing. Unit tests mock the child process.
 
 ## Pull Request Guidelines
 

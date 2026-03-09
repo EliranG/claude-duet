@@ -5,11 +5,6 @@ import { PromptRouter } from "../router.js";
 import { ClaudeBridge } from "../claude.js";
 import { TerminalUI } from "../ui.js";
 
-// Mock the Claude Agent SDK to avoid real API calls
-vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
-  query: vi.fn(),
-}));
-
 describe("integration: host + guest full flow", () => {
   let server: ClaudeDuetServer;
   let client: ClaudeDuetClient;
@@ -70,7 +65,7 @@ describe("integration: host + guest full flow", () => {
     // Host approves — mock sendPrompt to avoid real SDK call
     const sendPromptSpy = vi
       .spyOn(claude, "sendPrompt")
-      .mockResolvedValue(undefined);
+      .mockReturnValue(undefined);
     await router.handleApproval({
       promptId: approvalRequests[0].promptId,
       approved: true,
@@ -85,7 +80,7 @@ describe("integration: host + guest full flow", () => {
   it("host can type messages via TerminalUI simulateInput", async () => {
     // Test the UI → handler → claude wiring pattern (no real server needed)
     const claude = new ClaudeBridge();
-    const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockResolvedValue(undefined);
+    const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockReturnValue(undefined);
 
     ui = new TerminalUI({ userName: "eliran", role: "host" });
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -109,7 +104,7 @@ describe("integration: host + guest full flow", () => {
     const port = await server.start();
 
     const claude = new ClaudeBridge();
-    vi.spyOn(claude, "sendPrompt").mockResolvedValue(undefined);
+    vi.spyOn(claude, "sendPrompt").mockReturnValue(undefined);
 
     const router = new PromptRouter(claude, server, {
       hostUser: "eliran",
@@ -149,7 +144,7 @@ describe("integration: host + guest full flow", () => {
     const port = await server.start();
 
     const claude = new ClaudeBridge();
-    const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockResolvedValue(undefined);
+    const sendPromptSpy = vi.spyOn(claude, "sendPrompt").mockReturnValue(undefined);
 
     client = new ClaudeDuetClient();
     await client.connect(`ws://localhost:${port}`, "benji", "test1234");

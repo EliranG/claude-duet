@@ -1,7 +1,7 @@
 {
   "name": "claude-duet",
-  "version": "0.1.2",
-  "description": "Claude duet coding — share a Claude Code session with a partner",
+  "version": "0.2.0",
+  "description": "Share your Claude Code session with a partner — real-time collaboration for AI pair programming",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -20,7 +20,9 @@
     "pair-programming",
     "ai",
     "collaboration",
-    "vibe-coding"
+    "vibe-coding",
+    "claude-code",
+    "real-time"
   ],
   "license": "MIT",
   "engines": {
@@ -51,6 +53,9 @@
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
     "ws": "^8.19.0"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/claude-code": ">=1.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
