@@ -1,10 +1,7 @@
 import nacl from "tweetnacl";
-import {
-  decodeUTF8,
-  encodeUTF8,
-  encodeBase64,
-  decodeBase64,
-} from "tweetnacl-util";
+import tweetnaclUtil from "tweetnacl-util";
+
+const { decodeUTF8, encodeUTF8, encodeBase64, decodeBase64 } = tweetnaclUtil;
 import { scryptSync } from "node:crypto";
 
 const KEY_LENGTH = nacl.secretbox.keyLength; // 32 bytes
