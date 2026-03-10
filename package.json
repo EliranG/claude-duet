@@ -1,6 +1,6 @@
 {
   "name": "claude-duet",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Share your Claude Code session with a partner — real-time collaboration for AI pair programming",
   "type": "module",
   "main": "dist/index.js",
