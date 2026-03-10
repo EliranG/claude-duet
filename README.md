@@ -57,6 +57,14 @@ Just type normally to talk to your partner. Prefix with **`@claude`** to send a 
 
 That's the whole idea. You decide when to bring Claude in.
 
+### When to use it
+
+- **Brainstorm mid-session.** Deep in a Claude Code session and want a second brain? Invite your colleague to jump in for 5 minutes, riff on the approach together, then they leave and you keep going.
+- **Demo Claude to your boss.** Instead of an hour-long screen share explaining what AI coding looks like — just send them a join command and let them see it live.
+- **Pair program across offices.** You're in Tel Aviv, your partner is in New York. One Claude, both driving.
+- **Code review with context.** Walk through a PR together with Claude explaining the changes in real time.
+- **Onboard a teammate.** Let them watch (and participate) as Claude sets up a new service, so they learn the codebase while it's being built.
+
 ## ☯︎ How It Works
 
 ```
