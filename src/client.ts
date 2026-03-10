@@ -187,6 +187,15 @@ export class ClaudeDuetClient extends EventEmitter {
     });
   }
 
+  sendTyping(isTyping: boolean): void {
+    this.sendEncrypted({
+      type: "typing",
+      user: this.user!,
+      isTyping,
+      timestamp: Date.now(),
+    });
+  }
+
   sendChat(text: string): void {
     this.sendEncrypted({
       type: "chat",

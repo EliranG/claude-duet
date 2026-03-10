@@ -170,6 +170,9 @@ export async function joinCommand(sessionCodeOrOffer: string, options: JoinOptio
       case "turn_complete":
         ui.showTurnComplete(msg.cost, msg.durationMs);
         break;
+      case "typing_indicator":
+        ui.showTypingIndicator((msg as any).user, (msg as any).isTyping);
+        break;
       case "notice":
         ui.showSystem(msg.message);
         break;
@@ -179,7 +182,28 @@ export async function joinCommand(sessionCodeOrOffer: string, options: JoinOptio
     }
   });
 
+  let typingTimeout: ReturnType<typeof setTimeout> | undefined;
+  let isTyping = false;
+
+  ui.onKeystroke(() => {
+    if (!isTyping) {
+      isTyping = true;
+      client.sendTyping(true);
+    }
+    if (typingTimeout) clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      isTyping = false;
+      client.sendTyping(false);
+    }, 2000);
+  });
+
   ui.onInput((text) => {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    if (isTyping) {
+      isTyping = false;
+      client.sendTyping(false);
+    }
+
     messageCount++;
 
     // Slash commands

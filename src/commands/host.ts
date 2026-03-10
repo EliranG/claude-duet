@@ -253,7 +253,43 @@ export async function hostCommand(options: HostOptions): Promise<void> {
     cmdCtx.partnerName = undefined;
   });
 
+  let typingTimeout: ReturnType<typeof setTimeout> | undefined;
+  let isTyping = false;
+
+  ui.onKeystroke(() => {
+    if (!isTyping) {
+      isTyping = true;
+      server.broadcast({
+        type: "typing_indicator",
+        user: options.name,
+        isTyping: true,
+        timestamp: Date.now(),
+      } as any);
+    }
+    if (typingTimeout) clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      isTyping = false;
+      server.broadcast({
+        type: "typing_indicator",
+        user: options.name,
+        isTyping: false,
+        timestamp: Date.now(),
+      } as any);
+    }, 2000);
+  });
+
   ui.onInput((text) => {
+    if (typingTimeout) clearTimeout(typingTimeout);
+    if (isTyping) {
+      isTyping = false;
+      server.broadcast({
+        type: "typing_indicator",
+        user: options.name,
+        isTyping: false,
+        timestamp: Date.now(),
+      } as any);
+    }
+
     messageCount++;
 
     // Slash commands
@@ -296,6 +332,9 @@ export async function hostCommand(options: HostOptions): Promise<void> {
   server.on("server_message", (msg) => {
     if (msg.type === "approval_request") {
       ui.showApprovalRequest(msg.promptId, msg.user, msg.text);
+    }
+    if (msg.type === "typing_indicator") {
+      ui.showTypingIndicator((msg as any).user, (msg as any).isTyping);
     }
   });
 

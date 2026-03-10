@@ -102,3 +102,7 @@ For WebSocket modes (with `--tunnel` or `--url`):
 ## Can more than two people join a session?
 
 Not currently. claude-duet is designed for two-person pair programming: one host and one guest. Multi-user support may be considered in future versions.
+
+## Can I see when my partner is typing?
+
+Yes, an inline typing indicator appears on the prompt line when your partner is typing. It uses keystroke debouncing so it only shows while they are actively typing, and disappears shortly after they stop.

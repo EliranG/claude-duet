@@ -115,6 +115,12 @@ export interface ChatReceived extends BaseMessage {
   source?: "host" | "guest";
 }
 
+export interface TypingIndicator extends BaseMessage {
+  type: "typing_indicator";
+  user: string;
+  isTyping: boolean;
+}
+
 export interface ApprovalStatusMessage extends BaseMessage {
   type: "approval_status";
   promptId: string;
@@ -160,7 +166,8 @@ export type ServerMessage =
   | NoticeMessage
   | ErrorMessage
   | ChatReceived
-  | HistoryReplayMessage;
+  | HistoryReplayMessage
+  | TypingIndicator;
 
 export type Message = ClientMessage | ServerMessage;
 
@@ -192,6 +199,10 @@ export function isJoinRequest(msg: unknown): msg is JoinRequest {
 
 export function isChatMessage(msg: unknown): msg is ChatMessage {
   return isObject(msg) && msg.type === "chat";
+}
+
+export function isTypingMessage(msg: unknown): msg is TypingMessage {
+  return isObject(msg) && msg.type === "typing";
 }
 
 export function isHistoryReplay(msg: unknown): msg is HistoryReplayMessage {
