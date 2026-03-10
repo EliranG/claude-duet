@@ -6,6 +6,7 @@ import {
   isPromptMessage,
   isApprovalResponse,
   isChatMessage,
+  isTypingMessage,
 } from "./protocol.js";
 import { deriveKey, encrypt, decrypt } from "./crypto.js";
 import type { DuetTransport } from "./transport.js";
@@ -152,6 +153,16 @@ export class ClaudeDuetServer extends EventEmitter {
       this.emit("chat", msg);
       return;
     }
+
+    if (isTypingMessage(msg)) {
+      this.broadcast({
+        type: "typing_indicator",
+        user: this.guestUser!,
+        isTyping: msg.isTyping,
+        timestamp: Date.now(),
+      });
+      return;
+    }
   }
 
   private handleMessage(ws: WebSocket, msg: unknown): void {
@@ -200,6 +211,16 @@ export class ClaudeDuetServer extends EventEmitter {
         timestamp: Date.now(),
       });
       this.emit("chat", msg);
+      return;
+    }
+
+    if (isTypingMessage(msg)) {
+      this.broadcast({
+        type: "typing_indicator",
+        user: this.guestUser!,
+        isTyping: msg.isTyping,
+        timestamp: Date.now(),
+      });
       return;
     }
   }

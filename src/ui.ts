@@ -16,6 +16,9 @@ export class TerminalUI {
   private rawMode = false;
   private lineBuffer = "";
   private rawHandler?: (data: Buffer) => void;
+  private keystrokeHandler?: () => void;
+  private typingUser?: string;
+  private claudeStreaming = false;
 
   constructor(options: TerminalUIOptions) {
     this.options = options;
@@ -23,6 +26,10 @@ export class TerminalUI {
 
   private sessionText(text: string): string {
     return this.background ? pc.white(text) : pc.dim(text);
+  }
+
+  private claudeStar(): string {
+    return `\x1b[38;5;208m\u2726\x1b[0m`;
   }
 
   private showInputPrompt(): void {
@@ -95,12 +102,15 @@ export class TerminalUI {
     process.stdout.write(pc.gray("⟩ "));
     process.stdout.write(pc.white(this.lineBuffer));
 
-    // Show ghost suggestion
+    // Show ghost suggestion or typing indicator (mutually exclusive)
     const suggestion = this.findSuggestion(this.lineBuffer);
     if (suggestion) {
       process.stdout.write(pc.dim(suggestion.ghost));
-      // Move cursor back to end of actual input
       process.stdout.write(`\x1b[${suggestion.ghost.length}D`);
+    } else if (this.typingUser && !this.lineBuffer) {
+      const indicator = `  ${this.typingUser} is typing...`;
+      process.stdout.write(pc.gray(pc.italic(indicator)));
+      process.stdout.write(`\x1b[${indicator.length}D`);
     }
   }
 
@@ -131,7 +141,7 @@ export class TerminalUI {
 
           // Enter
           if (code === 13 || code === 10) {
-            process.stdout.write("\n");
+            process.stdout.write(`\r\x1b[2K`); // clear typed input line
             const trimmed = this.lineBuffer.trim();
             this.lineBuffer = "";
             if (trimmed && this.inputHandler) {
@@ -174,6 +184,7 @@ export class TerminalUI {
           if (code >= 32) {
             this.lineBuffer += ch;
             this.redrawLine();
+            this.keystrokeHandler?.();
           }
         }
       };
@@ -279,7 +290,8 @@ export class TerminalUI {
   }
 
   showClaudeThinking(): void {
-    console.log(this.sessionText("  \u2726 Claude is thinking..."));
+    this.claudeStreaming = false;
+    console.log(`\n  ${this.claudeStar()} ${pc.dim("Claude is thinking...")}`);
   }
 
   showApprovalStatus(status: "pending" | "approved" | "rejected"): void {
@@ -302,7 +314,7 @@ export class TerminalUI {
 
   showSessionSummary(summary: { duration: string; messageCount: number; cost?: number }): void {
     console.log("");
-    console.log(pc.bold("  \u2726 Session ended"));
+    console.log(pc.bold(`  ${this.claudeStar()} Session ended`));
     console.log(this.sessionText(`  Duration: ${summary.duration}`));
     console.log(this.sessionText(`  Messages: ${summary.messageCount}`));
     if (summary.cost !== undefined && summary.cost > 0) {
@@ -312,19 +324,24 @@ export class TerminalUI {
   }
 
   showStreamChunk(text: string): void {
+    if (!this.claudeStreaming) {
+      this.claudeStreaming = true;
+      process.stdout.write(`\n  ${this.claudeStar()} ${pc.bold("\x1b[38;5;208mClaude\x1b[0m")}\n`);
+    }
     process.stdout.write(text);
   }
 
   showToolUse(tool: string, _input: Record<string, unknown>): void {
-    console.log(this.sessionText(`  [tool] ${tool}`));
+    console.log(pc.dim(`  \x1b[38;5;208m\u25b8\x1b[0m ${pc.dim(tool)}`));
   }
 
   showToolResult(tool: string, output: string): void {
-    console.log(this.sessionText(`  [result] ${tool}: ${output.slice(0, 100)}`));
+    console.log(pc.dim(`  \x1b[38;5;208m\u25c2\x1b[0m ${pc.dim(`${tool}: ${output.slice(0, 100)}`)}`));
   }
 
   showTurnComplete(cost: number, durationMs: number): void {
-    console.log(this.sessionText(`\n  Turn complete: $${cost.toFixed(4)}, ${(durationMs / 1000).toFixed(1)}s`));
+    this.claudeStreaming = false;
+    console.log(pc.dim(`\n  ${this.claudeStar()} $${cost.toFixed(4)} \u00b7 ${(durationMs / 1000).toFixed(1)}s`));
   }
 
   showPartnerJoined(user: string): void {
@@ -379,6 +396,29 @@ export class TerminalUI {
       // Non-TTY (e.g., piped input from test script) — auto-approve
       if (this.approvalHandler) this.approvalHandler(promptId, true);
     }
+  }
+
+  showTypingIndicator(user: string, isTyping: boolean): void {
+    if (isTyping) {
+      this.typingUser = user;
+    } else if (this.typingUser === user) {
+      this.typingUser = undefined;
+    }
+    // Redraw prompt to show/hide inline indicator
+    if (this.rawMode) {
+      this.redrawLine();
+    }
+  }
+
+  clearTypingIndicator(): void {
+    this.typingUser = undefined;
+    if (this.rawMode) {
+      this.redrawLine();
+    }
+  }
+
+  onKeystroke(handler: () => void): void {
+    this.keystrokeHandler = handler;
   }
 
   onInput(handler: (text: string) => void): void {
