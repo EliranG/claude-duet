@@ -44,6 +44,8 @@ Send the join command to your partner via Slack, Discord, whatever works.
 
 > **Context is preserved.** Because claude-duet wraps Claude Code in headless mode, your Claude Code conversation history carries over. Use `--continue` to pick up where you left off, and after the duet session ends, run `claude --continue` to keep going solo. Claude remembers everything — before, during, and after the duet.
 
+> **Heads up:** claude-duet gives your partner the ability to run prompts on your machine through Claude Code. Approval mode is on by default so you review every prompt — but only share sessions with people you trust. Think of it like handing someone a terminal.
+
 ## ✦ What Is This
 
 A shared terminal session where two people can **chat with each other** and **invoke Claude together using `@claude <prompt>`**.
