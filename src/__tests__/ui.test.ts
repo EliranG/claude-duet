@@ -39,14 +39,24 @@ describe("TerminalUI", () => {
     expect(() => ui.startInputLoop()).not.toThrow();
   });
 
-  it("showUserPrompt displays formatted message", () => {
+  it("showUserPrompt displays 'you' for self messages", () => {
     ui = new TerminalUI({ userName: "benji", role: "guest" });
     ui.showUserPrompt("benji", "hello world", "guest");
     expect(console.log).toHaveBeenCalled();
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
-    expect(output).toContain("benji");
+    expect(output).toContain("you");
     expect(output).toContain("hello world");
+  });
+
+  it("showUserPrompt displays partner name for partner messages", () => {
+    ui = new TerminalUI({ userName: "benji", role: "guest" });
+    ui.showUserPrompt("eliran", "hey there", "host");
+    expect(console.log).toHaveBeenCalled();
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("eliran");
+    expect(output).toContain("hey there");
   });
 
   it("showWelcome displays session info", () => {
@@ -113,12 +123,22 @@ describe("TerminalUI", () => {
     expect(output).toContain("Send your partner this command to join");
   });
 
-  it("showUserPrompt with mode 'claude' shows Claude indicator", () => {
+  it("showUserPrompt with mode 'claude' shows Claude indicator for self", () => {
     ui = new TerminalUI({ userName: "benji", role: "guest" });
     ui.showUserPrompt("benji", "fix the bug", "guest", "claude");
     const calls = (console.log as any).mock.calls;
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
-    expect(output).toContain("benji");
+    expect(output).toContain("you");
+    expect(output).toContain("Claude");
+    expect(output).toContain("fix the bug");
+  });
+
+  it("showUserPrompt with mode 'claude' shows partner name for partner", () => {
+    ui = new TerminalUI({ userName: "benji", role: "guest" });
+    ui.showUserPrompt("eliran", "fix the bug", "host", "claude");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("eliran");
     expect(output).toContain("Claude");
     expect(output).toContain("fix the bug");
   });

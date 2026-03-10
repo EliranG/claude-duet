@@ -212,7 +212,7 @@ export class TerminalUI {
     process.stdout.write(applyBackground(this.background));
   }
 
-  showWelcome(sessionCode: string, password: string, connectUrl?: string): void {
+  showWelcome(sessionCode: string, password: string, connectUrl?: string, joinCmd?: string): void {
     this.applySessionBackground();
 
     const violet = (s: string) => pc.magenta(s);
@@ -225,11 +225,16 @@ export class TerminalUI {
     console.log(violet("  └─────────────────────────────────────────────┘"));
     console.log("");
 
-    if (connectUrl) {
-      const joinCmd = `npx claude-duet join ${sessionCode} --password ${password} --url ${connectUrl}`;
+    if (joinCmd) {
+      // Custom join command (P2P or other)
       console.log(`  ${dim("Send your partner this command to join:")}`);
       console.log("");
       console.log(`  ${pc.green("▶")} ${pc.bold(pc.green(joinCmd))}`);
+    } else if (connectUrl) {
+      const cmd = `npx claude-duet join ${sessionCode} --password ${password} --url ${connectUrl}`;
+      console.log(`  ${dim("Send your partner this command to join:")}`);
+      console.log("");
+      console.log(`  ${pc.green("▶")} ${pc.bold(pc.green(cmd))}`);
     } else {
       console.log(`  ${pc.cyan("●")} Session code  ${pc.bold(pc.white(sessionCode))}`);
       console.log(`  ${pc.cyan("●")} Password      ${pc.bold(pc.white(password))}`);
@@ -252,12 +257,23 @@ export class TerminalUI {
   }
 
   showUserPrompt(user: string, text: string, role: "host" | "guest", mode: "chat" | "claude" = "chat"): void {
-    const label = role === "host" ? `${user} (host)` : user;
-    const labelColor = role === "host" ? pc.cyan : pc.yellow;
-    if (mode === "claude") {
-      console.log(`\n${pc.bold(labelColor(`[${label}]`))} ${pc.dim("\u2192 \u2726 Claude:")}`);
+    const isSelf = role === this.options.role;
+    const partnerColor = role === "host" ? pc.cyan : pc.yellow;
+
+    if (isSelf) {
+      // Self messages — subtle since you just typed it
+      if (mode === "claude") {
+        console.log(`\n${pc.dim("you \u2192 \u2726 Claude:")}`);
+      } else {
+        console.log(`\n${pc.dim("you:")}`);
+      }
     } else {
-      console.log(`\n${pc.bold(labelColor(`[${label}]:`))}`)
+      // Partner messages — prominent with name and color
+      if (mode === "claude") {
+        console.log(`\n${pc.bold(partnerColor(user))} ${pc.dim("\u2192 \u2726 Claude:")}`);
+      } else {
+        console.log(`\n${pc.bold(partnerColor(user + ":"))}`);
+      }
     }
     console.log(`  ${this.background ? pc.white(text) : text}`);
   }

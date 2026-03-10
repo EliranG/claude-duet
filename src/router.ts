@@ -27,12 +27,13 @@ export class PromptRouter {
   async handlePrompt(msg: PromptMessage): Promise<void> {
     const isHost = msg.source === "host";
 
-    // Broadcast that prompt was received
+    // Broadcast that prompt was received (include source so the sender can skip their own echo)
     this.server.broadcast({
       type: "prompt_received",
       promptId: msg.id,
       user: msg.user,
       text: msg.text,
+      source: msg.source,
       timestamp: Date.now(),
     });
 

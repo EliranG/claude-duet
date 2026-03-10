@@ -25,10 +25,12 @@ npm install -g @anthropic-ai/claude-code
 npx claude-duet host --name Alice
 
 # Your partner joins (copy the command from your terminal)
-npx claude-duet join cd-a1b2c3d4 --password abc123 --url ws://192.168.1.5:4567
+npx claude-duet join <offer-code> --password abc123
 ```
 
 Send the join command to your partner via Slack, Discord, whatever works.
+
+**P2P mode** (default): After your partner runs the join command, they'll get an answer code to share back with you. Paste it into your terminal — that's it, you're connected directly peer-to-peer via WebRTC. No server needed.
 
 ### Step by Step
 
@@ -58,16 +60,15 @@ That's the whole idea. You decide when to bring Claude in.
 ## ☯︎ How It Works
 
 ```
-┌──────────────────┐     WebSocket      ┌──────────────────┐
-│   You (host)     │◄══════════════════►│   Partner        │
-│   Claude Code    │    E2E encrypted   │   Terminal       │
-│   (headless)     │                    │   Client         │
-│   + WS Server    │                    │                  │
-└──────────────────┘                    └──────────────────┘
+┌──────────────────┐  WebRTC P2P (default)  ┌──────────────────┐
+│   You (host)     │◄══════════════════════►│   Partner        │
+│   Claude Code    │    E2E encrypted       │   Terminal       │
+│   (headless)     │    NAT hole-punching   │   Client         │
+└──────────────────┘                        └──────────────────┘
 ```
 
 - **Host** runs Claude Code on their machine in headless mode
-- **Partner** connects and sees everything live
+- **Partner** connects directly via WebRTC data channel (no server in between)
 - **Chat** goes between you two — Claude doesn't see it
 - **`@claude <prompt>`** sends to Claude — both of you see the response streaming
 - **Approval mode** (on by default) — host reviews partner's Claude prompts before they run
@@ -81,12 +82,13 @@ Same for commands: `/h` → `/help`, `/s` → `/status`, etc.
 
 ```bash
 npx claude-duet                          # Interactive wizard
-npx claude-duet host                     # Start a session
+npx claude-duet host                     # Start a session (P2P default)
 npx claude-duet host --continue          # Resume your most recent Claude Code session
 npx claude-duet host --resume <id>       # Resume a specific session
 npx claude-duet host --no-approval       # Trust mode — skip prompt review
 npx claude-duet host --tunnel cloudflare # Remote access via Cloudflare tunnel
-npx claude-duet join <code> --password <pw> --url <url>
+npx claude-duet join <offer-code> --password <pw>           # P2P join
+npx claude-duet join <session-code> --password <pw> --url <url>  # WebSocket join
 ```
 
 ### In-Session
@@ -118,7 +120,8 @@ Project-level config (`.claude-duet.json`) overrides user config. CLI flags over
 
 | Mode | Command | When |
 |------|---------|------|
-| **LAN** | `npx claude-duet host` | Same Wi-Fi / VPN |
+| **P2P (default)** | `npx claude-duet host` | Any network — direct WebRTC connection |
+| **LAN** | `npx claude-duet host --tunnel localtunnel` | Same Wi-Fi / VPN (fallback) |
 | **SSH Tunnel** | `ssh -L 3000:localhost:3000 host` | Remote, secure |
 | **Cloudflare** | `npx claude-duet host --tunnel cloudflare` | Remote, no server needed |
 
@@ -126,7 +129,7 @@ Project-level config (`.claude-duet.json`) overrides user config. CLI flags over
 
 - **E2E Encrypted** — NaCl secretbox + scrypt key derivation
 - **Approval Mode** — host reviews partner's Claude prompts (on by default)
-- **No Third-Party Relay** — LAN direct by default, your data stays on your network
+- **P2P Direct** — WebRTC data channel by default, no server or relay in the data path
 - **Host Controls Everything** — Claude runs on your machine, your API key
 
 ## ⌥ Development
@@ -136,7 +139,7 @@ git clone https://github.com/elirang/claude-duet.git
 cd claude-duet
 npm install
 npm run build
-npm test                # 124 tests across 17 files
+npm test                # 148 tests across 20 files
 ```
 
 Requires Node.js 18+ and [Claude Code](https://claude.ai/code) CLI.

@@ -8,6 +8,7 @@ import {
   isChatMessage,
 } from "./protocol.js";
 import { deriveKey, encrypt, decrypt } from "./crypto.js";
+import type { DuetTransport } from "./transport.js";
 
 export interface ServerOptions {
   hostUser: string;
@@ -19,6 +20,7 @@ export interface ServerOptions {
 export class ClaudeDuetServer extends EventEmitter {
   private wss?: WebSocketServer;
   private guest?: WebSocket;
+  private guestTransport?: DuetTransport;
   private guestUser?: string;
   private options: Required<ServerOptions>;
   private encryptionKey: Uint8Array;
@@ -44,9 +46,35 @@ export class ClaudeDuetServer extends EventEmitter {
     });
   }
 
+  attachTransport(transport: DuetTransport): void {
+    if (this.guest || this.guestTransport) {
+      return;
+    }
+
+    this.guestTransport = transport;
+
+    transport.on("message", (data: string) => {
+      try {
+        const decrypted = decrypt(data, this.encryptionKey);
+        const msg: unknown = JSON.parse(decrypted);
+        this.handleTransportMessage(transport, msg);
+      } catch {
+        // Ignore malformed or undecryptable messages
+      }
+    });
+
+    transport.on("close", () => {
+      if (transport === this.guestTransport) {
+        this.guestTransport = undefined;
+        this.guestUser = undefined;
+        this.emit("guest_left");
+      }
+    });
+  }
+
   private handleConnection(ws: WebSocket): void {
     // Only allow one guest
-    if (this.guest) {
+    if (this.guest || this.guestTransport) {
       const payload: ServerMessage = {
         type: "join_rejected",
         reason: "Session is full",
@@ -74,6 +102,56 @@ export class ClaudeDuetServer extends EventEmitter {
         this.emit("guest_left");
       }
     });
+  }
+
+  private handleTransportMessage(transport: DuetTransport, msg: unknown): void {
+    if (isJoinRequest(msg)) {
+      if (msg.passwordHash !== this.options.password) {
+        this.sendTransport(transport, {
+          type: "join_rejected",
+          reason: "Invalid password",
+          timestamp: Date.now(),
+        });
+        return;
+      }
+      this.guestTransport = transport;
+      this.guestUser = msg.user;
+      this.sendTransport(transport, {
+        type: "join_accepted",
+        sessionId: "session",
+        hostUser: this.options.hostUser,
+        approvalMode: this.options.approvalMode,
+        timestamp: Date.now(),
+      });
+      this.emit("guest_joined", msg.user);
+      return;
+    }
+
+    if (isPromptMessage(msg)) {
+      msg.user = this.guestUser!;
+      msg.source = "guest";
+      this.emit("prompt", msg);
+      return;
+    }
+
+    if (isApprovalResponse(msg)) {
+      this.emit("approval_response", msg);
+      return;
+    }
+
+    if (isChatMessage(msg)) {
+      msg.user = this.guestUser!;
+      msg.source = "guest";
+      this.broadcast({
+        type: "chat_received",
+        user: msg.user,
+        text: msg.text,
+        source: "guest",
+        timestamp: Date.now(),
+      });
+      this.emit("chat", msg);
+      return;
+    }
   }
 
   private handleMessage(ws: WebSocket, msg: unknown): void {
@@ -118,6 +196,7 @@ export class ClaudeDuetServer extends EventEmitter {
         type: "chat_received",
         user: msg.user,
         text: msg.text,
+        source: "guest",
         timestamp: Date.now(),
       });
       this.emit("chat", msg);
@@ -126,10 +205,14 @@ export class ClaudeDuetServer extends EventEmitter {
   }
 
   broadcast(msg: ServerMessage): void {
+    const encrypted = encrypt(JSON.stringify(msg), this.encryptionKey);
+
     if (this.guest?.readyState === WebSocket.OPEN) {
-      const encrypted = encrypt(JSON.stringify(msg), this.encryptionKey);
       this.guest.send(encrypted);
+    } else if (this.guestTransport?.isOpen()) {
+      this.guestTransport.send(encrypted);
     }
+
     // Also emit locally for host TUI
     this.emit("server_message", msg);
   }
@@ -138,6 +221,13 @@ export class ClaudeDuetServer extends EventEmitter {
     if (ws.readyState === WebSocket.OPEN) {
       const encrypted = encrypt(JSON.stringify(msg), this.encryptionKey);
       ws.send(encrypted);
+    }
+  }
+
+  private sendTransport(transport: DuetTransport, msg: ServerMessage): void {
+    if (transport.isOpen()) {
+      const encrypted = encrypt(JSON.stringify(msg), this.encryptionKey);
+      transport.send(encrypted);
     }
   }
 
@@ -151,11 +241,21 @@ export class ClaudeDuetServer extends EventEmitter {
       this.guest.close();
       this.guest = undefined;
       this.guestUser = undefined;
+    } else if (this.guestTransport) {
+      this.sendTransport(this.guestTransport, {
+        type: "error",
+        message: "You have been disconnected by the host.",
+        timestamp: Date.now(),
+      });
+      this.guestTransport.close();
+      this.guestTransport = undefined;
+      this.guestUser = undefined;
     }
   }
 
   async stop(): Promise<void> {
     this.guest?.close();
+    this.guestTransport?.close();
     return new Promise((resolve) => {
       if (this.wss) {
         this.wss.close(() => resolve());
@@ -166,7 +266,7 @@ export class ClaudeDuetServer extends EventEmitter {
   }
 
   isGuestConnected(): boolean {
-    return this.guest?.readyState === WebSocket.OPEN;
+    return (this.guest?.readyState === WebSocket.OPEN) || (this.guestTransport?.isOpen() ?? false);
   }
 
   getGuestUser(): string | undefined {

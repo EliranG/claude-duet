@@ -60,6 +60,7 @@ export interface PromptReceived extends BaseMessage {
   promptId: string;
   user: string;
   text: string;
+  source?: "host" | "guest";
 }
 
 export interface ApprovalRequest extends BaseMessage {
@@ -111,6 +112,7 @@ export interface ChatReceived extends BaseMessage {
   type: "chat_received";
   user: string;
   text: string;
+  source?: "host" | "guest";
 }
 
 export interface ApprovalStatusMessage extends BaseMessage {
