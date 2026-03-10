@@ -75,6 +75,7 @@ That's the whole idea. You decide when to bring Claude in.
 
 Type `@` and ghost text will suggest the completion. Press **Tab** to accept.
 Same for commands: `/h` → `/help`, `/s` → `/status`, etc.
+A **typing indicator** appears inline on the prompt line when your partner is typing.
 
 ## ⌘ Commands
 
@@ -139,7 +140,7 @@ git clone https://github.com/elirang/claude-duet.git
 cd claude-duet
 npm install
 npm run build
-npm test                # 148 tests across 20 files
+npm test                # 150 tests across 20 files
 ```
 
 Requires Node.js 18+ and [Claude Code](https://claude.ai/code) CLI.

@@ -2,6 +2,23 @@
 
 All notable changes to claude-duet will be documented in this file.
 
+## [0.3.0] - 2026-03-10
+
+### Added
+- WebRTC P2P as default connection mode (no relay server needed)
+- SDP offer/answer codec for compact terminal-friendly connection codes
+- Typing indicators (inline on prompt line, keystroke debounced)
+- Claude branded response UI (orange header, tool arrows, styled footer)
+- Auto-copy join/answer codes to clipboard
+- DuetTransport abstraction for WebSocket and WebRTC
+
+### Fixed
+- Message duplication when host and guest share the same username
+- Input line double echo on Enter
+
+### Changed
+- UI labels use "you" for self, partner name for others
+
 ## [0.2.0] - 2026-03-09
 
 ### Changed

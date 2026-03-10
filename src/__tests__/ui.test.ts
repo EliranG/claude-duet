@@ -192,4 +192,84 @@ describe("TerminalUI", () => {
     const output = calls.map((c: any[]) => c.join(" ")).join("\n");
     expect(output).toContain("Type @claude to ask Claude");
   });
+
+  it("showStreamChunk first call shows Claude header", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showStreamChunk("hello");
+    const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
+    expect(allWrites).toContain("\u2726");
+    expect(allWrites).toContain("Claude");
+  });
+
+  it("showStreamChunk subsequent calls don't repeat header", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showStreamChunk("hello");
+    ui.showStreamChunk("world");
+    const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
+    const claudeMatches = allWrites.split("Claude").length - 1;
+    expect(claudeMatches).toBe(1);
+  });
+
+  it("showTurnComplete resets streaming state", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showStreamChunk("hello");
+    ui.showTurnComplete(0.01, 1000);
+    ui.showStreamChunk("again");
+    const allWrites = (process.stdout.write as any).mock.calls.map((c: any[]) => String(c[0])).join("");
+    const claudeMatches = allWrites.split("Claude").length - 1;
+    expect(claudeMatches).toBe(2);
+  });
+
+  it("showToolUse shows orange arrow", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showToolUse("Read", {});
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("\u25b8");
+    expect(output).toContain("Read");
+  });
+
+  it("showToolResult shows orange arrow", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showToolResult("Read", "file contents");
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("\u25c2");
+    expect(output).toContain("Read");
+  });
+
+  it("showTurnComplete shows cost and duration with star", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showTurnComplete(0.05, 4600);
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("\u2726");
+    expect(output).toContain("$0.0500");
+    expect(output).toContain("4.6s");
+  });
+
+  it("showClaudeThinking includes orange star", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    ui.showClaudeThinking();
+    const calls = (console.log as any).mock.calls;
+    const output = calls.map((c: any[]) => c.join(" ")).join("\n");
+    expect(output).toContain("\x1b[38;5;208m");
+  });
+
+  it("showTypingIndicator stores typing user", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    expect(() => ui.showTypingIndicator("benji", true)).not.toThrow();
+    expect(() => ui.showTypingIndicator("benji", false)).not.toThrow();
+  });
+
+  it("clearTypingIndicator clears state", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    expect(() => ui.clearTypingIndicator()).not.toThrow();
+  });
+
+  it("onKeystroke stores handler", () => {
+    ui = new TerminalUI({ userName: "eliran", role: "host" });
+    const handler = vi.fn();
+    expect(() => ui.onKeystroke(handler)).not.toThrow();
+  });
 });
