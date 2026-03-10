@@ -5,6 +5,7 @@ import {
   isApprovalRequest,
   isPresenceMessage,
   isHistoryReplay,
+  isTypingMessage,
   type PromptMessage,
   type StreamChunk,
 } from "../protocol.js";
@@ -62,5 +63,26 @@ describe("protocol type guards", () => {
     };
     expect(isHistoryReplay(msg)).toBe(true);
     expect(isPromptMessage(msg)).toBe(false);
+  });
+
+  it("isTypingMessage identifies typing messages", () => {
+    const msg = {
+      type: "typing",
+      user: "benji",
+      isTyping: true,
+      timestamp: 1,
+    };
+    expect(isTypingMessage(msg)).toBe(true);
+  });
+
+  it("isTypingMessage rejects non-typing messages", () => {
+    const msg = {
+      type: "chat",
+      id: "abc",
+      user: "benji",
+      text: "hello",
+      timestamp: Date.now(),
+    };
+    expect(isTypingMessage(msg)).toBe(false);
   });
 });
