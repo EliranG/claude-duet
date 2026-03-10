@@ -1,37 +1,108 @@
 import { ClaudeDuetClient } from "../client.js";
 import { TerminalUI } from "../ui.js";
 import { handleSlashCommand, type CommandContext } from "./session-commands.js";
+import { createAnswer } from "../peer.js";
+import { decodeSDP } from "../sdp-codec.js";
+import { copyToClipboard } from "../clipboard.js";
 
 interface JoinOptions {
   name: string;
-  password: string;
+  password?: string;
   url?: string;
 }
 
-export async function joinCommand(sessionCode: string, options: JoinOptions): Promise<void> {
+export async function joinCommand(sessionCodeOrOffer: string, options: JoinOptions): Promise<void> {
   const ui = new TerminalUI({ userName: options.name, role: "guest" });
-
-  const serverUrl = options.url || await resolveSessionUrl(sessionCode);
-
-  ui.showSystem(`Connecting to ${serverUrl}...`);
 
   const client = new ClaudeDuetClient();
   let result: Awaited<ReturnType<typeof client.connect>>;
+  let peerCleanup: (() => void) | undefined;
 
-  try {
-    result = await client.connect(serverUrl, options.name, options.password, sessionCode);
-    ui.applySessionBackground();
-    ui.showSystem(`Connected! You're in a duet session with ${result.hostUser}.`);
-    if (result.approvalMode) {
-      ui.showSystem("Approval mode is ON \u2014 host will review your prompts.");
+  // Detect if the argument is an offer code (base64url) or a session code (cd-xxx)
+  const isOfferCode = !sessionCodeOrOffer.startsWith("cd-");
+
+  if (isOfferCode) {
+    // P2P mode — decode offer code and create answer
+    if (!options.password) {
+      ui.showError("--password is required");
+      process.exit(1);
     }
-    console.log("");
-    ui.startInputLoop();
-    ui.showHint("Type a message to chat, or @claude <prompt> to ask Claude. /help for commands.");
-  } catch (err) {
-    ui.showError(`Failed to join: ${err instanceof Error ? err.message : err}`);
-    process.exit(1);
+
+    ui.showSystem("Decoding offer code...");
+
+    let sessionCode: string;
+    try {
+      const decoded = decodeSDP(sessionCodeOrOffer);
+      sessionCode = decoded.sessionCode;
+    } catch {
+      ui.showError("Invalid offer code. Check that you copied it correctly.");
+      process.exit(1);
+    }
+
+    ui.showSystem("Creating P2P answer...");
+
+    try {
+      const answer = await createAnswer(sessionCodeOrOffer);
+      peerCleanup = answer.cleanup;
+
+      console.log("");
+      console.log(`  Send this answer code to your partner:`);
+      console.log("");
+      console.log(`  ${answer.answerCode}`);
+      console.log("");
+
+      if (copyToClipboard(answer.answerCode)) {
+        ui.showSystem("Copied answer code to clipboard!");
+      }
+
+      ui.showSystem("Waiting for P2P connection...");
+
+      const transport = await Promise.race([
+        answer.transport,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("P2P connection timed out (30s)")), 30000),
+        ),
+      ]);
+
+      ui.showSystem("P2P connected! Joining session...");
+
+      result = await client.connectTransport(
+        transport,
+        options.name,
+        options.password,
+        sessionCode,
+      );
+    } catch (err) {
+      ui.showError(`P2P connection failed: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
+  } else {
+    // WebSocket mode — classic session code + URL
+    if (!options.password) {
+      ui.showError("--password is required");
+      process.exit(1);
+    }
+
+    const serverUrl = options.url || await resolveSessionUrl(sessionCodeOrOffer);
+
+    ui.showSystem(`Connecting to ${serverUrl}...`);
+
+    try {
+      result = await client.connect(serverUrl, options.name, options.password, sessionCodeOrOffer);
+    } catch (err) {
+      ui.showError(`Failed to join: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
   }
+
+  ui.applySessionBackground();
+  ui.showSystem(`Connected! You're in a duet session with ${result.hostUser}.`);
+  if (result.approvalMode) {
+    ui.showSystem("Approval mode is ON — host will review your prompts.");
+  }
+  console.log("");
+  ui.startInputLoop();
+  ui.showHint("Type a message to chat, or @claude <prompt> to ask Claude. /help for commands.");
 
   let messageCount = 0;
   const sessionStartTime = Date.now();
@@ -49,6 +120,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
         duration: `${minutes}m ${seconds}s`,
         messageCount,
       });
+      peerCleanup?.();
       await client.disconnect();
       ui.close();
       process.exit(0);
@@ -74,14 +146,14 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
         break;
       }
       case "chat_received":
-        // Skip own chat messages (already shown locally)
-        if ((msg as any).user === options.name) break;
-        ui.showUserPrompt((msg as any).user, (msg as any).text, (msg as any).user === result.hostUser ? "host" : "guest", "chat");
+        // Skip own chat messages (already shown locally) — use source field to avoid same-name collisions
+        if (msg.source === "guest") break;
+        ui.showUserPrompt(msg.user, msg.text, msg.source === "host" ? "host" : "guest", "chat");
         break;
       case "prompt_received":
-        // Skip own messages (already shown locally when typed)
-        if (msg.user === options.name) break;
-        ui.showUserPrompt(msg.user, msg.text, msg.user === result.hostUser ? "host" : "guest", "claude");
+        // Skip own messages (already shown locally when typed) — use source field
+        if (msg.source === "guest") break;
+        ui.showUserPrompt(msg.user, msg.text, msg.source === "host" ? "host" : "guest", "claude");
         break;
       case "approval_status":
         ui.showApprovalStatus((msg as any).status);
@@ -135,6 +207,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
     });
     ui.showSystem("The host has ended the session.");
     ui.showHint("Tip: Resume this Claude Code session solo with: claude --continue");
+    peerCleanup?.();
     ui.close();
     process.exit(0);
   });
@@ -147,6 +220,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
       duration: `${minutes}m ${seconds}s`,
       messageCount,
     });
+    peerCleanup?.();
     await client.disconnect();
     ui.close();
     process.exit(0);
@@ -155,7 +229,7 @@ export async function joinCommand(sessionCode: string, options: JoinOptions): Pr
 
 async function resolveSessionUrl(sessionCode: string): Promise<string> {
   throw new Error(
-    `Session discovery not available \u2014 use --url to connect directly.\n` +
+    `Session discovery not available — use --url to connect directly.\n` +
     `  Ask the host for the join command, or run:\n` +
     `  claude-duet join ${sessionCode} --password <password> --url ws://<host-ip>:<port>`
   );

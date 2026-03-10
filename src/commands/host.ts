@@ -5,9 +5,11 @@ import { TerminalUI } from "../ui.js";
 import { getLocalIP, formatConnectionInfo, startCloudflareTunnel, startLocaltunnel, type ConnectionInfo } from "../connection.js";
 import { SessionManager } from "../session.js";
 import { handleSlashCommand, type CommandContext } from "./session-commands.js";
-import { loadConfig } from "../config.js";
 import { parseSessionHistory, getProjectSessionDir } from "../history.js";
+import { createOffer } from "../peer.js";
+import { copyToClipboard } from "../clipboard.js";
 import { join } from "node:path";
+import * as readline from "node:readline";
 
 interface HostOptions {
   name: string;
@@ -72,39 +74,95 @@ export async function hostCommand(options: HostOptions): Promise<void> {
   });
 
   await claude.start();
-  const port = await server.start(options.port || 0);
 
-  let connInfo: ConnectionInfo;
-  if (options.tunnel === "cloudflare") {
-    try {
-      ui.showSystem("Starting Cloudflare tunnel...");
-      connInfo = await startCloudflareTunnel(port);
-      ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
-    } catch (err) {
-      ui.showError(String(err));
-      const localIP = getLocalIP();
-      connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
-    }
-  } else if (options.tunnel === "localtunnel") {
-    ui.showSystem("Starting localtunnel...");
-    const tunnelInfo = await startLocaltunnel(port);
-    if (tunnelInfo) {
-      connInfo = tunnelInfo;
-      ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
+  let connInfo: ConnectionInfo | undefined;
+  let peerCleanup: (() => void) | undefined;
+
+  // Determine connection mode
+  const useTunnel = options.tunnel || options.relay;
+
+  if (useTunnel) {
+    // WebSocket mode (tunnel / relay / LAN)
+    const port = await server.start(options.port || 0);
+
+    if (options.tunnel === "cloudflare") {
+      try {
+        ui.showSystem("Starting Cloudflare tunnel...");
+        connInfo = await startCloudflareTunnel(port);
+        ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
+      } catch (err) {
+        ui.showError(String(err));
+        const localIP = getLocalIP();
+        connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
+      }
+    } else if (options.tunnel === "localtunnel") {
+      ui.showSystem("Starting localtunnel...");
+      const tunnelInfo = await startLocaltunnel(port);
+      if (tunnelInfo) {
+        connInfo = tunnelInfo;
+        ui.showSystem(`Tunnel ready: ${connInfo.displayUrl}`);
+      } else {
+        ui.showError("localtunnel failed — falling back to LAN.");
+        const localIP = getLocalIP();
+        connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
+      }
+    } else if (options.relay) {
+      connInfo = formatConnectionInfo({ mode: "relay", host: options.relay, port: 0 });
+      ui.showSystem(`Using relay: ${options.relay}`);
     } else {
-      ui.showError("localtunnel failed — falling back to LAN.");
       const localIP = getLocalIP();
       connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
     }
-  } else if (options.relay) {
-    connInfo = formatConnectionInfo({ mode: "relay", host: options.relay, port: 0 });
-    ui.showSystem(`Using relay: ${options.relay}`);
+
+    ui.showWelcome(session.code, session.password, connInfo.displayUrl);
   } else {
-    const localIP = getLocalIP();
-    connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
+    // P2P mode (default)
+    ui.showSystem("Setting up P2P connection...");
+
+    try {
+      const offer = await createOffer(session.code);
+      peerCleanup = offer.cleanup;
+
+      const joinCmd = `npx claude-duet join ${offer.offerCode} --password ${session.password}`;
+      ui.showWelcome(session.code, session.password, undefined, joinCmd);
+
+      if (copyToClipboard(joinCmd)) {
+        ui.showSystem("Copied join command to clipboard!");
+      }
+
+      ui.showSystem("Waiting for your partner's answer code...");
+
+      const answerCode = await promptForAnswerCode();
+
+      ui.showSystem("Connecting to partner...");
+      offer.acceptAnswer(answerCode);
+
+      const transport = await Promise.race([
+        offer.transport,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("P2P connection timed out (30s)")), 30000),
+        ),
+      ]);
+
+      server.attachTransport(transport);
+      ui.showSystem("P2P connection established!");
+    } catch (err) {
+      ui.showError(`P2P setup failed: ${err instanceof Error ? err.message : err}`);
+      ui.showSystem("Falling back to LAN mode...");
+
+      const port = await server.start(options.port || 0);
+      const localIP = getLocalIP();
+      connInfo = formatConnectionInfo({ mode: "lan", host: localIP, port });
+      ui.showSystem(`LAN server ready on ${connInfo.displayUrl}`);
+
+      const joinCmd = `npx claude-duet join ${session.code} --password ${session.password} --url ${connInfo.displayUrl}`;
+      console.log("");
+      console.log(`  Send your partner this command to join:`);
+      console.log(`  ${joinCmd}`);
+      console.log("");
+    }
   }
 
-  ui.showWelcome(session.code, session.password, connInfo.displayUrl);
   ui.startInputLoop();
   ui.showHint("Type a message to chat, or @claude <prompt> to ask Claude. /help for commands.");
 
@@ -146,7 +204,8 @@ export async function hostCommand(options: HostOptions): Promise<void> {
         duration: `${minutes}m ${seconds}s`,
         messageCount,
       });
-      connInfo.cleanup?.();
+      connInfo?.cleanup?.();
+      peerCleanup?.();
       await claude.stop();
       await server.stop();
       ui.close();
@@ -218,9 +277,10 @@ export async function hostCommand(options: HostOptions): Promise<void> {
       // Chat message — broadcast to guest, don't send to Claude
       ui.showUserPrompt(options.name, text, "host", "chat");
       server.broadcast({
-        type: "chat_received" as any,
+        type: "chat_received",
         user: options.name,
         text,
+        source: "host",
         timestamp: Date.now(),
       });
     }
@@ -253,10 +313,24 @@ export async function hostCommand(options: HostOptions): Promise<void> {
       duration: `${minutes}m ${seconds}s`,
       messageCount,
     });
-    connInfo.cleanup?.();
+    connInfo?.cleanup?.();
+    peerCleanup?.();
     await claude.stop();
     await server.stop();
     ui.close();
     process.exit(0);
+  });
+}
+
+function promptForAnswerCode(): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+    rl.question("  Paste answer code: ", (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
   });
 }

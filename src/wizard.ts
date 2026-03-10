@@ -5,7 +5,7 @@ export interface WizardResult {
   mode: "host" | "join" | "relay";
   name: string;
   // Host options
-  connectionType?: "lan" | "ssh" | "cloudflare" | "relay";
+  connectionType?: "p2p" | "lan" | "ssh" | "cloudflare" | "relay";
   trustMode?: "approval" | "trusted";
   port?: number;
   relayUrl?: string;
@@ -60,12 +60,13 @@ async function runHostWizard(name: string): Promise<WizardResult | null> {
   const connectionType = await p.select({
     message: "How will your partner connect?",
     options: [
-      { value: "lan", label: "Same network (LAN / VPN)", hint: "default, no setup needed" },
+      { value: "p2p", label: "P2P direct (WebRTC)", hint: "default, works across networks" },
+      { value: "lan", label: "Same network (LAN / VPN)", hint: "local WebSocket connection" },
       { value: "ssh", label: "SSH tunnel", hint: "partner has SSH access to this machine" },
       { value: "cloudflare", label: "Cloudflare tunnel", hint: "requires cloudflared installed" },
       { value: "relay", label: "Self-hosted relay", hint: "connect via your team's relay server" },
     ],
-  }) as "lan" | "ssh" | "cloudflare" | "relay";
+  }) as "p2p" | "lan" | "ssh" | "cloudflare" | "relay";
 
   if (p.isCancel(connectionType)) { p.cancel("Cancelled."); return null; }
 

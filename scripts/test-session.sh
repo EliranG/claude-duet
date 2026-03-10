@@ -71,7 +71,8 @@ echo ""
 # tail -f watches the input file for new lines appended by the orchestrator.
 # Output is tee'd to both the terminal and a log file so the guest script
 # can discover the join command. Unlike `script`, `tee` does not echo stdin.
-tail -f "$SESSION_DIR/host-input.txt" | node dist/index.js host --name Eliran -p 0 2>&1 | tee "$SESSION_DIR/host-output.log"
+# Use --tunnel localtunnel for scripted testing (P2P requires manual SDP exchange)
+tail -f "$SESSION_DIR/host-input.txt" | node dist/index.js host --name Eliran -p 0 --tunnel localtunnel 2>&1 | tee "$SESSION_DIR/host-output.log"
 HOSTEOF
 
 # Substitute paths (can't use shell vars inside single-quoted heredoc)

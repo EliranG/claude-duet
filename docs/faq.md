@@ -14,21 +14,24 @@ Your partner sees exactly what Claude sees and produces during the session: Clau
 
 ## Is it secure? How does encryption work?
 
-All WebSocket messages are end-to-end encrypted using NaCl secretbox (XSalsa20-Poly1305). The encryption key is derived from the session password using scrypt (with the session code as salt). Even if someone intercepts the WebSocket traffic, they cannot read the messages without the password.
+All messages are end-to-end encrypted using NaCl secretbox (XSalsa20-Poly1305). The encryption key is derived from the session password using scrypt (with the session code as salt). Even if someone intercepts the traffic, they cannot read the messages without the password.
 
 Additional security layers:
 - **Session codes** are crypto-random (nanoid) and **passwords** are generated from `crypto.randomBytes`
 - **Unclaimed sessions expire** after 5 minutes
 - **Approval mode** (on by default) requires the host to review and approve the partner's Claude prompts before they execute
-- **LAN-direct by default** — your data stays on your local network with no third-party relay
+- **P2P direct by default** — WebRTC data channels with DTLS encryption, plus NaCl application-layer encryption (defense in depth)
+- No third-party relay in the default P2P mode — your data flows directly between the two machines
 
-When using SSH tunnels for remote access, you get SSH's encryption on top of the NaCl encryption (defense in depth).
+When using SSH tunnels for remote access, you get SSH's encryption on top of the NaCl encryption (triple layered).
 
 ## Can I use this remotely, not on the same network?
 
-Yes. There are three ways to connect remotely:
+Yes. The default P2P mode uses WebRTC with STUN-based NAT traversal, which works across different networks for most home/office NAT types (~80-85% success rate). Just run `npx claude-duet host` and share the join command — no tunnel or server setup needed.
 
-1. **SSH tunnel** (recommended): If your partner has SSH access to your machine, they forward the port:
+If P2P doesn't work (e.g. behind a strict corporate firewall), there are fallback options:
+
+1. **SSH tunnel**: If your partner has SSH access to your machine, they forward the port:
    ```
    ssh -L 3000:localhost:3000 your-host
    ```
@@ -79,17 +82,22 @@ You can also start without it: `npx claude-duet host --no-approval`.
 - Node.js 18 or later
 - That's it — no Claude Code installation needed. Just `npx claude-duet join ...`
 
-**Optional (for remote access):**
+**Optional (for fallback connection modes):**
 - `cloudflared` for Cloudflare tunnel mode (`brew install cloudflared`)
 - SSH access to the host machine for SSH tunnel mode
 
 ## I'm getting "connection refused" or the join command hangs. What should I check?
 
-1. **Same network**: Make sure both machines are on the same Wi-Fi or VPN. The default mode is LAN-direct.
-2. **Firewall**: Check that the port is not blocked. On macOS, you may get a system prompt to allow incoming connections.
-3. **Correct URL**: Double-check the `--url` and `--password` values. Copy the exact join command the host terminal prints.
-4. **Session expired**: Unclaimed sessions expire after 5 minutes. If you waited too long, restart the host.
-5. **Only one guest**: claude-duet supports exactly one host and one guest. If someone is already connected, new connections are rejected.
+1. **P2P mode**: Make sure both sides exchanged the offer and answer codes correctly. Copy the full codes — even one missing character will fail.
+2. **NAT type**: Some restrictive NATs (symmetric NAT) block WebRTC hole punching. Try `--tunnel cloudflare` as a fallback.
+3. **Firewall**: Check that UDP traffic is not blocked. WebRTC uses UDP for the data channel.
+4. **Correct password**: Double-check the `--password` value. Copy the exact join command the host terminal prints.
+5. **Session expired**: Unclaimed sessions expire after 5 minutes. If you waited too long, restart the host.
+6. **Only one guest**: claude-duet supports exactly one host and one guest. If someone is already connected, new connections are rejected.
+
+For WebSocket modes (with `--tunnel` or `--url`):
+- Make sure both machines are on the same Wi-Fi or VPN for LAN mode
+- Check that the port is not blocked on macOS (you may get a system prompt)
 
 ## Can more than two people join a session?
 

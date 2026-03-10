@@ -11,7 +11,7 @@ const program = new Command();
 
 program
   .name("claude-duet")
-  .description("Claude duet coding \u2014 share a Claude Code session with a partner")
+  .description("Claude duet coding — share a Claude Code session with a partner")
   .version("0.2.0");
 
 program
@@ -21,7 +21,7 @@ program
   .option("--no-approval", "disable approval mode (trust your partner)")
   .option("--tunnel [provider]", "use a tunnel for remote access (localtunnel, cloudflare)")
   .option("--relay <url>", "use a relay server for remote access")
-  .option("-p, --port <port>", "WebSocket server port", "0")
+  .option("-p, --port <port>", "WebSocket server port (tunnel/LAN modes)", "0")
   .option("-c, --continue", "resume most recent Claude Code session")
   .option("--resume <id>", "resume a specific Claude Code session by ID")
   .option("--permission-mode <mode>", "permission mode: auto (default) or interactive")
@@ -42,19 +42,18 @@ program
   });
 
 program
-  .command("join <session-code>")
-  .description("Join an existing claude-duet session")
+  .command("join <session-code-or-offer>")
+  .description("Join an existing claude-duet session (session code or P2P offer code)")
   .option("-n, --name <name>", "your display name", process.env.USER || "guest")
   .option("--password <password>", "session password")
   .option("--url <url>", "WebSocket URL (direct, SSH tunnel, VPN, etc.)")
-  .option("--relay <url>", "connect via a relay server")
-  .action((sessionCode, options) => {
+  .action((sessionCodeOrOffer, options) => {
     if (!options.password) {
       console.error("Error: --password is required");
       process.exit(1);
     }
     const config = loadConfig();
-    joinCommand(sessionCode, {
+    joinCommand(sessionCodeOrOffer, {
       name: options.name !== (process.env.USER || "guest") ? options.name : (config.name || options.name),
       password: options.password,
       url: options.url,
