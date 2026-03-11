@@ -17,12 +17,20 @@
   },
   "keywords": [
     "claude",
+    "claude-code",
     "pair-programming",
     "ai",
     "collaboration",
     "vibe-coding",
-    "claude-code",
-    "real-time"
+    "real-time",
+    "terminal-sharing",
+    "developer-tools",
+    "cli",
+    "websocket",
+    "anthropic",
+    "remote-collaboration",
+    "ai-pair-programming",
+    "screen-sharing"
   ],
   "license": "MIT",
   "engines": {

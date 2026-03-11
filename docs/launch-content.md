@@ -100,14 +100,15 @@ I've been using Claude Code a lot at work and kept wishing I could share a sessi
 So I built **claude-duet**: an open-source CLI tool that lets two developers share a Claude Code session in real-time.
 
 **How it works:**
-- Host runs Claude Code locally and starts a WebSocket server
-- Partner connects and sends prompts to the shared session
+- Host runs Claude Code locally, partner connects directly via WebRTC peer-to-peer (default)
+- Partner sends prompts to the shared session
 - Both see Claude's responses streamed live
 - All messages are E2E encrypted (NaCl secretbox + scrypt)
 - Approval mode (on by default) — host reviews partner prompts before execution
 
 **Connection modes:**
-- LAN direct (default, zero config)
+- WebRTC P2P (default, no server needed)
+- LAN direct
 - SSH tunnel
 - Cloudflare Quick Tunnel
 - Self-hosted relay server
@@ -128,18 +129,18 @@ MIT licensed. Would love feedback and ideas for what to build next. The roadmap 
 **Title:** Show r/programming: claude-duet — share an AI coding session between two developers with E2E encryption
 
 **Body:**
-I built an open-source CLI tool called **claude-duet** that lets two developers share a Claude Code (Anthropic's AI coding CLI) session over WebSocket with end-to-end encryption.
+I built an open-source CLI tool called **claude-duet** that lets two developers share a Claude Code (Anthropic's AI coding CLI) session with WebRTC peer-to-peer and end-to-end encryption.
 
 **Technical highlights:**
-- WebSocket-based with NaCl secretbox encryption (XSalsa20-Poly1305) + scrypt key derivation
-- Multiple transport options: LAN direct, SSH tunnel, Cloudflare Quick Tunnel, self-hosted relay
+- WebRTC P2P by default (via node-datachannel), with NaCl secretbox encryption (XSalsa20-Poly1305) + scrypt key derivation
+- Fallback transport options: LAN direct, SSH tunnel, Cloudflare Quick Tunnel, self-hosted relay
 - Built with TypeScript, Ink (React for terminal), Commander
 - Uses Anthropic's Claude Agent SDK under the hood
 - Host-guest model with optional prompt approval workflow
 
 **Architecture:**
 ```
-Host (Claude Code + WS Server) <--encrypted--> Guest (WS Client + Terminal UI)
+Host (Claude Code) <--WebRTC P2P encrypted--> Guest (Terminal UI)
 ```
 
 It's essentially a thin multiplexing layer over Claude Code that lets a remote developer send prompts and see responses in real-time, with the host maintaining full control.
@@ -184,13 +185,13 @@ Hi HN, I'm Eliran. I lead R&D at Wix where we build AI-first products with multi
 
 I kept wanting to pair program with colleagues using Claude Code (Anthropic's AI coding CLI) but there was no way to share a session. So I built claude-duet.
 
-It's a CLI that lets two developers share a Claude Code session in real-time. The host runs Claude locally, the partner connects via WebSocket and sends prompts. Everything is E2E encrypted with NaCl secretbox.
+It's a CLI that lets two developers share a Claude Code session in real-time. The host runs Claude locally, the partner connects via WebRTC peer-to-peer (default) and sends prompts. Everything is E2E encrypted with NaCl secretbox. You also get typing indicators so you can see when someone's composing a prompt.
 
 Technical decisions I'm happy to discuss:
-- Why WebSocket over alternatives (simplicity, bidirectional, well-supported)
+- WebRTC P2P as default transport (via node-datachannel) — no server needed, NAT traversal built in
 - E2E encryption with scrypt key derivation from a shared password
 - Host-guest model with optional approval mode (vs. both running Claude independently)
-- Transport-agnostic design (LAN, SSH, Cloudflare tunnel, or custom relay)
+- Transport-agnostic design — also supports LAN, SSH, Cloudflare tunnel, or custom relay
 
 The tool is MIT licensed, written in TypeScript, uses Ink for the terminal UI (same framework Claude Code uses).
 
@@ -220,8 +221,8 @@ So I built **claude-duet**.
 
 claude-duet is an open-source CLI that lets two developers share a Claude Code session in real-time:
 
-- **Host** runs Claude Code locally via the Agent SDK and starts a WebSocket server
-- **Partner** connects from their terminal and sends prompts
+- **Host** runs Claude Code locally via the Agent SDK
+- **Partner** connects peer-to-peer from their terminal and sends prompts
 - **Both** see Claude's responses streamed live
 - **All communication** is end-to-end encrypted
 
@@ -236,14 +237,14 @@ npx claude-duet join cd-a1b2c3d4 --password mypassword --url ws://192.168.1.5:45
 ## The Architecture
 
 ```
-┌──────────────┐     WebSocket      ┌──────────────┐
+┌──────────────┐    WebRTC P2P      ┌──────────────┐
 │   Host       │◄──────────────────►│   Partner    │
-│   Claude Code│     encrypted      │   Terminal   │
-│   + Server   │                    │   Client     │
+│   Claude Code│    E2E encrypted   │   Terminal   │
+│              │                    │   Client     │
 └──────────────┘                    └──────────────┘
 ```
 
-The host machine is the only one that talks to Claude. The partner sends prompts through an encrypted WebSocket connection. This means:
+The host machine is the only one that talks to Claude. The partner connects peer-to-peer (WebRTC by default) and sends prompts through an encrypted channel. This means:
 
 1. Only one API key needed (the host's)
 2. The host maintains full control
@@ -263,6 +264,7 @@ One design decision I'm proud of: the tool is **transport-agnostic**. It works o
 
 | Mode | Use Case |
 |------|----------|
+| **WebRTC P2P** (default) | No server needed, works across NATs |
 | **LAN Direct** | Same network, zero config |
 | **SSH Tunnel** | Remote, proven security |
 | **Cloudflare Tunnel** | Remote, no server needed |
@@ -273,7 +275,8 @@ One design decision I'm proud of: the tool is **transport-agnostic**. It works o
 - **TypeScript** — end to end
 - **Ink** — React for the terminal (same framework Claude Code uses)
 - **@clack/prompts** — interactive setup wizard
-- **ws** — WebSocket client/server
+- **node-datachannel** — WebRTC P2P (default transport)
+- **ws** — WebSocket fallback
 - **tweetnacl** — NaCl encryption
 - **Commander** — CLI framework
 
@@ -310,9 +313,9 @@ The project is MIT licensed and contributions are welcome.
 
 Hey everyone! I just open-sourced **claude-duet** — a CLI tool that lets two developers share a Claude Code session in real-time.
 
-Host runs Claude Code + a WebSocket server, partner connects and sends prompts. Both see everything streamed live, E2E encrypted.
+Host runs Claude Code, partner connects peer-to-peer (WebRTC by default). Both see everything streamed live, E2E encrypted. No server needed.
 
-Works over LAN, SSH, Cloudflare tunnels, or a self-hosted relay.
+Also supports LAN, SSH, Cloudflare tunnels, or a self-hosted relay if P2P doesn't fit your setup.
 
 `npx claude-duet host` to try it.
 

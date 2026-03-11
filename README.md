@@ -6,6 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/claude-duet)](https://www.npmjs.com/package/claude-duet)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm downloads](https://img.shields.io/npm/dm/claude-duet)](https://www.npmjs.com/package/claude-duet)
 
 Share your Claude Code session with a friend — real-time collaboration for AI pair programming.
 
