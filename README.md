@@ -171,6 +171,6 @@ See the [FAQ](docs/faq.md) for common questions about security, remote access, p
 
 <div align="center">
 
-✦ Built by Eliran Geffen vibing with [Claude Code](https://claude.ai/code) ✦
+✦ Co-created by Eliran Geffen in duet with [Claude Code](https://claude.ai/code) ✦
 
 </div>
