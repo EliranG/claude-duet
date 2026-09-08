@@ -171,6 +171,6 @@ See the [FAQ](docs/faq.md) for common questions about security, remote access, p
 
 <div align="center">
 
-✦ Built by vibing with [Claude Code](https://claude.ai/code) ✦
+✦ Built by Eliran Geffen vibing with [Claude Code](https://claude.ai/code) ✦
 
 </div>
